@@ -122,12 +122,16 @@ int main(int argc, char* args[])
 		return false; // SDL init fail
 	}
 
-	srand(time(NULL));
+	//set the viewport
+	SDL_Rect vp = { 0, 0, 450, 280 };
+	SDL_RenderSetViewport(g_pRenderer, &vp);
 
-	Uint32 frameStart, frameTime;
-
+	//load the level
 	Level lvl;
 	lvl.LoadFromFile("files/level1.tmx");
+
+	srand(time(NULL));
+	Uint32 frameStart, frameTime;
 
 	while (isRunning)
 	{
@@ -157,10 +161,13 @@ int main(int argc, char* args[])
 		}
 
 		if (isKeyDown(SDL_SCANCODE_ESCAPE)) isRunning = false;
+		if (isKeyDown(SDL_SCANCODE_LEFT)) vp.x--;
+		if (isKeyDown(SDL_SCANCODE_RIGHT)) vp.x++;
 
 		//draw
 		SDL_SetRenderDrawColor(g_pRenderer, 107, 140, 255, 255);
 		SDL_RenderClear(g_pRenderer);
+		SDL_RenderSetViewport(g_pRenderer, &vp);
 
 		lvl.Draw(g_pRenderer);
 
