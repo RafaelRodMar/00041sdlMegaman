@@ -126,6 +126,9 @@ int main(int argc, char* args[])
 
 	Uint32 frameStart, frameTime;
 
+	Level lvl;
+	lvl.LoadFromFile("files/level1.tmx");
+
 	while (isRunning)
 	{
 		frameStart = SDL_GetTicks(); //tiempo inicial
@@ -158,6 +161,8 @@ int main(int argc, char* args[])
 		//draw
 		SDL_SetRenderDrawColor(g_pRenderer, 107, 140, 255, 255);
 		SDL_RenderClear(g_pRenderer);
+
+		lvl.Draw(g_pRenderer);
 
 		SDL_RenderPresent(g_pRenderer); // draw to the screen
 

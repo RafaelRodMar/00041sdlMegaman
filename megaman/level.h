@@ -10,6 +10,7 @@
 struct Sprite {
 	SDL_Texture* texture;
 	SDL_Rect rect;
+	SDL_Point pos;
 };
 
 struct Object {
@@ -36,7 +37,7 @@ public:
 	Object GetObject(std::string name);
 	std::vector<Object> GetObjects(std::string name);
 	std::vector<Object> GetAllObjects();
-	void Draw(SDL_Renderer &window);
+	void Draw(SDL_Renderer *window);
 	SDL_Point GetTileSize();
 
 private:
@@ -105,6 +106,7 @@ bool Level::LoadFromFile(std::string filename)
 	if (img == 0)
 	{
 		std::cout << "Failed to load tile sheet." << std::endl;
+		std::cout << SDL_GetError() << " " << imagepath << std::endl;
 		return false;
 	}
 	
@@ -129,24 +131,25 @@ bool Level::LoadFromFile(std::string filename)
 	for (int y = 0; y < rows; y++)
 		for (int x = 0; x < columns; x++)
 		{
-			sf::Rect<int> rect;
+			SDL_Rect rect;
 
-			rect.top = y * tileHeight;
-			rect.height = tileHeight;
-			rect.left = x * tileWidth;
-			rect.width = tileWidth;
+			rect.y = y * tileHeight;
+			rect.h = tileHeight;
+			rect.x = x * tileWidth;
+			rect.w = tileWidth;
 
 			subRects.push_back(rect);
 		}
 
-	// Работа со слоями
+	// parse the layers
 	TiXmlElement *layerElement;
 	layerElement = map->FirstChildElement("layer");
 	while (layerElement)
 	{
+		//new layer
 		Layer layer;
 
-		// Если присутствует opacity, то задаем прозрачность слоя, иначе он полностью непрозрачен
+		// set the opacity of the layers
 		if (layerElement->Attribute("opacity") != NULL)
 		{
 			float opacity = strtod(layerElement->Attribute("opacity"), NULL);
@@ -157,7 +160,7 @@ bool Level::LoadFromFile(std::string filename)
 			layer.opacity = 255;
 		}
 
-		// Контейнер <data>
+		// process data of the layer
 		TiXmlElement *layerDataElement;
 		layerDataElement = layerElement->FirstChildElement("data");
 
@@ -166,7 +169,7 @@ bool Level::LoadFromFile(std::string filename)
 			std::cout << "Bad map. No layer information found." << std::endl;
 		}
 
-		// Контейнер <tile> - описание тайлов каждого слоя
+		// tile data
 		TiXmlElement *tileElement;
 		tileElement = layerDataElement->FirstChildElement("tile");
 
@@ -184,14 +187,13 @@ bool Level::LoadFromFile(std::string filename)
 			int tileGID = atoi(tileElement->Attribute("gid"));
 			int subRectToUse = tileGID - firstTileID;
 
-			// Устанавливаем TextureRect каждого тайла
+			// set the subrect of the texture for every tile
 			if (subRectToUse >= 0)
 			{
-				sf::Sprite sprite;
-				sprite.setTexture(tilesetImage);
-				sprite.setTextureRect(subRects[subRectToUse]);
-				sprite.setPosition(x * tileWidth, y * tileHeight);
-				sprite.setColor(sf::Color(255, 255, 255, layer.opacity));
+				Sprite sprite;
+				sprite.texture = tilesetImage;
+				sprite.rect = subRects[subRectToUse];
+				sprite.pos = { x * tileWidth, y * tileHeight };
 
 				layer.tiles.push_back(sprite);
 			}
@@ -213,22 +215,21 @@ bool Level::LoadFromFile(std::string filename)
 		layerElement = layerElement->NextSiblingElement("layer");
 	}
 
-	// Работа с объектами
+	// parse the objects
 	TiXmlElement *objectGroupElement;
 
-	// Если есть слои объектов
 	if (map->FirstChildElement("objectgroup") != NULL)
 	{
 		objectGroupElement = map->FirstChildElement("objectgroup");
 		while (objectGroupElement)
 		{
-			// Контейнер <object>
+			// <object> tag
 			TiXmlElement *objectElement;
 			objectElement = objectGroupElement->FirstChildElement("object");
 
 			while (objectElement)
 			{
-				// Получаем все данные - тип, имя, позиция, etc
+				// get the attributes of the objects
 				std::string objectType;
 				if (objectElement->Attribute("type") != NULL)
 				{
@@ -244,10 +245,10 @@ bool Level::LoadFromFile(std::string filename)
 
 				int width, height;
 
-				sf::Sprite sprite;
-				sprite.setTexture(tilesetImage);
-				sprite.setTextureRect(sf::Rect<int>(0, 0, 0, 0));
-				sprite.setPosition(x, y);
+				Sprite sprite;
+				sprite.texture = tilesetImage;
+				sprite.rect = { 0,0,0,0 };
+				sprite.pos = { x, y };
 
 				if (objectElement->Attribute("width") != NULL)
 				{
@@ -256,25 +257,25 @@ bool Level::LoadFromFile(std::string filename)
 				}
 				else
 				{
-					width = subRects[atoi(objectElement->Attribute("gid")) - firstTileID].width;
-					height = subRects[atoi(objectElement->Attribute("gid")) - firstTileID].height;
-					sprite.setTextureRect(subRects[atoi(objectElement->Attribute("gid")) - firstTileID]);
+					width = subRects[atoi(objectElement->Attribute("gid")) - firstTileID].w;
+					height = subRects[atoi(objectElement->Attribute("gid")) - firstTileID].h;
+					sprite.rect = subRects[atoi(objectElement->Attribute("gid")) - firstTileID];
 				}
 
-				// Экземпляр объекта
+				// create the object
 				Object object;
 				object.name = objectName;
 				object.type = objectType;
 				object.sprite = sprite;
 
-				sf::Rect <float> objectRect;
-				objectRect.top = y;
-				objectRect.left = x;
-				objectRect.height = height;
-				objectRect.width = width;
+				SDL_FRect objectRect;
+				objectRect.y = y;
+				objectRect.x = x;
+				objectRect.h = height;
+				objectRect.w = width;
 				object.rect = objectRect;
 
-				// "Переменные" объекта
+				// set properties of the object
 				TiXmlElement *properties;
 				properties = objectElement->FirstChildElement("properties");
 				if (properties != NULL)
@@ -309,4 +310,48 @@ bool Level::LoadFromFile(std::string filename)
 	}
 
 	return true;
+}
+
+Object Level::GetObject(std::string name)
+{
+	// get object by name
+	for (int i = 0; i < objects.size(); i++)
+		if (objects[i].name == name)
+			return objects[i];
+}
+
+std::vector<Object> Level::GetObjects(std::string name)
+{
+	// get all the objects with the same name
+	std::vector<Object> vec;
+	for (int i = 0; i < objects.size(); i++)
+		if (objects[i].name == name)
+			vec.push_back(objects[i]);
+
+	return vec;
+}
+
+
+std::vector<Object> Level::GetAllObjects()
+{
+	return objects;
+};
+
+
+SDL_Point Level::GetTileSize()
+{
+	return { tileWidth, tileHeight };
+}
+
+void Level::Draw(SDL_Renderer *window)
+{
+	// draw the tiles of every layer
+	for (int layer = 0; layer < layers.size(); layer++)
+		for (int tile = 0; tile < layers[layer].tiles.size(); tile++) {
+			//window.draw(layers[layer].tiles[tile]);
+			Sprite sp = layers[layer].tiles[tile];
+			SDL_SetTextureAlphaMod(sp.texture, 255);
+			SDL_Rect dest = { sp.pos.x, sp.pos.y, sp.rect.w, sp.rect.h };
+			SDL_RenderCopyEx(window, sp.texture, &sp.rect, &dest, 0.0, 0, SDL_FLIP_NONE);
+		}
 }
