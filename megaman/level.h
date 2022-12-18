@@ -24,6 +24,11 @@ struct Object {
 	std::map<std::string, std::string> properties;
 
 	Sprite sprite;
+
+	SDL_Rect getRect() {
+		SDL_Rect r = { rect.x, rect.y, rect.w, rect.h };
+		return r;
+	}
 };
 
 struct Layer {
@@ -39,6 +44,8 @@ public:
 	std::vector<Object> GetAllObjects();
 	void Draw(SDL_Renderer *window);
 	SDL_Point GetTileSize();
+	int offsetX = 0;
+	int offsetY = 0;
 
 private:
 	int width, height, tileWidth, tileHeight;
@@ -351,7 +358,7 @@ void Level::Draw(SDL_Renderer *window)
 			//window.draw(layers[layer].tiles[tile]);
 			Sprite sp = layers[layer].tiles[tile];
 			SDL_SetTextureAlphaMod(sp.texture, 255);
-			SDL_Rect dest = { sp.pos.x, sp.pos.y, sp.rect.w, sp.rect.h };
+			SDL_Rect dest = { sp.pos.x + offsetX, sp.pos.y + offsetY, sp.rect.w, sp.rect.h };
 			SDL_RenderCopyEx(window, sp.texture, &sp.rect, &dest, 0.0, 0, SDL_FLIP_NONE);
 		}
 }

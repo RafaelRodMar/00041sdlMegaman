@@ -79,6 +79,8 @@ bool isKeyDown(SDL_Scancode key)
 bool isRunning = true;
 
 #include "level.h"
+#include "animation.h"
+#include "player.h"
 
 const int FPS = 60;
 const int DELAY_TIME = 1000.0f / FPS;
@@ -122,13 +124,19 @@ int main(int argc, char* args[])
 		return false; // SDL init fail
 	}
 
-	//set the viewport
-	SDL_Rect vp = { 0, 0, 450, 280 };
-	SDL_RenderSetViewport(g_pRenderer, &vp);
-
 	//load the level
 	Level lvl;
 	lvl.LoadFromFile("files/level1.tmx");
+
+	//load player animations
+	SDL_Texture* megaman_t;
+	AnimationManager anim;
+	anim.loadFromXML("files/anim_megaman.xml", megaman_t);
+	anim.animList["jump"].loop = 0;
+
+	//create player
+	Object pl = lvl.GetObject("player");
+	PLAYER Mario(anim, lvl, pl.rect.x, pl.rect.y);
 
 	srand(time(NULL));
 	Uint32 frameStart, frameTime;
@@ -161,15 +169,21 @@ int main(int argc, char* args[])
 		}
 
 		if (isKeyDown(SDL_SCANCODE_ESCAPE)) isRunning = false;
-		if (isKeyDown(SDL_SCANCODE_LEFT)) vp.x--;
-		if (isKeyDown(SDL_SCANCODE_RIGHT)) vp.x++;
+		if (isKeyDown(SDL_SCANCODE_LEFT)) lvl.offsetX++;
+		if (isKeyDown(SDL_SCANCODE_RIGHT)) lvl.offsetX--;
+		if (isKeyDown(SDL_SCANCODE_UP)) lvl.offsetY++;
+		if (isKeyDown(SDL_SCANCODE_DOWN)) lvl.offsetY--;
+
+		//update
+		Mario.update(25);
 
 		//draw
 		SDL_SetRenderDrawColor(g_pRenderer, 107, 140, 255, 255);
 		SDL_RenderClear(g_pRenderer);
-		SDL_RenderSetViewport(g_pRenderer, &vp);
 
 		lvl.Draw(g_pRenderer);
+
+		Mario.draw(g_pRenderer);
 
 		SDL_RenderPresent(g_pRenderer); // draw to the screen
 
