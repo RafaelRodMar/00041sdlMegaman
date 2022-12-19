@@ -79,7 +79,7 @@ bool isKeyDown(SDL_Scancode key)
 bool isRunning = true;
 
 #include "level.h"
-//#include "animation.h"
+#include "animation.h"
 //#include "player.h"
 
 const int FPS = 60;
@@ -130,9 +130,12 @@ int main(int argc, char* args[])
 
 	//load player animations
 	SDL_Texture* megaman_t;
-	/*AnimationManager anim;
+	AnimationManager anim;
 	anim.loadFromXML("files/anim_megaman.xml", megaman_t);
-	anim.animList["jump"].loop = 0;*/
+	anim.animList["jump"].loop = 0;
+
+	Sprite sp = anim.animList["jump"].sprite;
+	drawFrameScl(sp.texture, 0, 0, sp.rect.w, sp.rect.h, sp.rect.w, sp.rect.h, g_pRenderer, 0.0, 255, SDL_FLIP_NONE);
 
 	//create player
 	Object pl = lvl.GetObject("player");
