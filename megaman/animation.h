@@ -73,21 +73,25 @@ public:
 	//parse the archive XML
 	void loadFromXML(std::string fileName, SDL_Texture* &t)
 	{
+		std::cout << "Anim file: " << fileName << std::endl;
 		TiXmlDocument animFile(fileName.c_str());
 
 		animFile.LoadFile();
 
 		TiXmlElement *head;
 		head = animFile.FirstChildElement("sprites");
+		std::cout << "Sprites found" << std::endl;
 
 		TiXmlElement *animElement;
 		animElement = head->FirstChildElement("animation");
+		std::cout << "Animation found" << std::endl;
 		while (animElement)
 		{
 			Animation anim;
 			currentAnim = animElement->Attribute("title");
 			int delay = atoi(animElement->Attribute("delay"));
 			anim.speed = 1.0 / delay; anim.sprite.texture = t;
+			std::cout << currentAnim << std::endl;
 
 			TiXmlElement *cut;
 			cut = animElement->FirstChildElement("cut");
@@ -99,6 +103,7 @@ public:
 				int h = atoi(cut->Attribute("h"));
 
 				anim.frames.push_back({ (float)x, (float)y, (float)w, (float)h });
+				std::cout << "Frame: " << x << "," << y << " // " << w << "," << h << std::endl;
 				cut = cut->NextSiblingElement("cut");
 			}
 
@@ -118,7 +123,9 @@ public:
 	{
 		animList[currentAnim].sprite.pos = { x,y };
 		Sprite sp = animList[currentAnim].sprite;
-		drawFrameScl(sp.texture, sp.pos.x, sp.pos.y, sp.rect.w, sp.rect.h, sp.rect.w, sp.rect.h, window, 0.0, 255, animList[currentAnim].flip == false ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL);
+		SDL_SetTextureAlphaMod(sp.texture, 255);
+		SDL_Rect dest = { sp.pos.x, sp.pos.y, sp.rect.w, sp.rect.h };
+		SDL_RenderCopyEx(window, sp.texture, &sp.rect, &dest, 0.0, 0, animList[currentAnim].flip == false ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL);
 	}
 
 	void flip(bool b = 1) { animList[currentAnim].flip = b; }

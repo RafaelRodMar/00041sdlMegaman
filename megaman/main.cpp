@@ -179,10 +179,10 @@ int main(int argc, char* args[])
 		}
 
 		if (isKeyDown(SDL_SCANCODE_ESCAPE)) isRunning = false;
-		if (isKeyDown(SDL_SCANCODE_LEFT)) lvl.offsetX++;
+		/*if (isKeyDown(SDL_SCANCODE_LEFT)) lvl.offsetX++;
 		if (isKeyDown(SDL_SCANCODE_RIGHT)) lvl.offsetX--;
 		if (isKeyDown(SDL_SCANCODE_UP)) lvl.offsetY++;
-		if (isKeyDown(SDL_SCANCODE_DOWN)) lvl.offsetY--;
+		if (isKeyDown(SDL_SCANCODE_DOWN)) lvl.offsetY--;*/
 
 		if (isKeyDown(SDL_SCANCODE_LEFT)) Mario.key["L"] = true;
 		if (isKeyDown(SDL_SCANCODE_RIGHT)) Mario.key["R"] = true;
@@ -191,6 +191,7 @@ int main(int argc, char* args[])
 
 		//update
 		Mario.update(20);
+		
 
 		//draw
 		SDL_SetRenderDrawColor(g_pRenderer, 107, 140, 255, 255);

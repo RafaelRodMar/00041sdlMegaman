@@ -33,7 +33,7 @@ public:
 
 	void draw(SDL_Renderer* window)
 	{
-		anim.draw(window, x, y + h);
+		anim.draw(window, x, y);
 	}
 
 	SDL_FRect getRect()
