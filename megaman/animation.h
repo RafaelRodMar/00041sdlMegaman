@@ -118,7 +118,7 @@ public:
 	{
 		animList[currentAnim].sprite.pos = { x,y };
 		Sprite sp = animList[currentAnim].sprite;
-		drawFrameScl(sp.texture, sp.pos.x, sp.pos.y, sp.rect.w, sp.rect.h, sp.rect.w, sp.rect.h, window, 0.0, 255, flip == false ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL);
+		drawFrameScl(sp.texture, sp.pos.x, sp.pos.y, sp.rect.w, sp.rect.h, sp.rect.w, sp.rect.h, window, 0.0, 255, animList[currentAnim].flip == false ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL);
 	}
 
 	void flip(bool b = 1) { animList[currentAnim].flip = b; }

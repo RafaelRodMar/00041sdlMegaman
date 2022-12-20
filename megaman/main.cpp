@@ -56,6 +56,15 @@ void drawFrameScl(SDL_Texture* textureMap, int x, int y, int srcWidth, int srcHe
 	SDL_RenderCopyEx(pRenderer, textureMap, &srcRect, &destRect, angle, 0, flip); //Load current frame on the buffer game.
 }
 
+SDL_Rect getRectFromFRect(SDL_FRect fr){
+	SDL_Rect r;
+	r.x = fr.x;
+	r.y = fr.y;
+	r.w = fr.w;
+	r.h = fr.h;
+	return r;
+}
+
 // keyboard specific
 const Uint8* m_keystates;
 
@@ -80,7 +89,7 @@ bool isRunning = true;
 
 #include "level.h"
 #include "animation.h"
-//#include "player.h"
+#include "player.h"
 
 const int FPS = 60;
 const int DELAY_TIME = 1000.0f / FPS;
@@ -136,7 +145,8 @@ int main(int argc, char* args[])
 
 	//create player
 	Object pl = lvl.GetObject("player");
-	/*PLAYER Mario(anim, lvl, pl.rect.x, pl.rect.y);*/
+	//PLAYER Mario(anim, lvl, pl.rect.x, pl.rect.y);
+	PLAYER Mario(anim, lvl, 50, 50);
 
 	srand(time(NULL));
 	Uint32 frameStart, frameTime;
@@ -174,8 +184,13 @@ int main(int argc, char* args[])
 		if (isKeyDown(SDL_SCANCODE_UP)) lvl.offsetY++;
 		if (isKeyDown(SDL_SCANCODE_DOWN)) lvl.offsetY--;
 
+		if (isKeyDown(SDL_SCANCODE_LEFT)) Mario.key["L"] = true;
+		if (isKeyDown(SDL_SCANCODE_RIGHT)) Mario.key["R"] = true;
+		if (isKeyDown(SDL_SCANCODE_UP)) Mario.key["Up"] = true;
+		if (isKeyDown(SDL_SCANCODE_DOWN)) Mario.key["Down"] = true;
+
 		//update
-		/*Mario.update(25);*/
+		Mario.update(20);
 
 		//draw
 		SDL_SetRenderDrawColor(g_pRenderer, 107, 140, 255, 255);
@@ -183,8 +198,7 @@ int main(int argc, char* args[])
 
 		lvl.Draw(g_pRenderer);
 
-		//Mario.draw(g_pRenderer);
-		//drawFrameScl(sp.texture, 0, 0, sp.rect.w, sp.rect.h, sp.rect.w, sp.rect.h, g_pRenderer, 0.0, 255, SDL_FLIP_NONE);
+		Mario.draw(g_pRenderer);
 
 		SDL_RenderPresent(g_pRenderer); // draw to the screen
 
