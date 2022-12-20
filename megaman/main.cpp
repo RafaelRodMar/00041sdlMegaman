@@ -129,13 +129,10 @@ int main(int argc, char* args[])
 	lvl.LoadFromFile("files/level1.tmx");
 
 	//load player animations
-	SDL_Texture* megaman_t;
+	SDL_Texture* megaman_t = loadTexture("files/images/megaman.png", g_pRenderer);
 	AnimationManager anim;
 	anim.loadFromXML("files/anim_megaman.xml", megaman_t);
 	anim.animList["jump"].loop = 0;
-
-	Sprite sp = anim.animList["jump"].sprite;
-	drawFrameScl(sp.texture, 0, 0, sp.rect.w, sp.rect.h, sp.rect.w, sp.rect.h, g_pRenderer, 0.0, 255, SDL_FLIP_NONE);
 
 	//create player
 	Object pl = lvl.GetObject("player");
@@ -187,6 +184,7 @@ int main(int argc, char* args[])
 		lvl.Draw(g_pRenderer);
 
 		//Mario.draw(g_pRenderer);
+		//drawFrameScl(sp.texture, 0, 0, sp.rect.w, sp.rect.h, sp.rect.w, sp.rect.h, g_pRenderer, 0.0, 255, SDL_FLIP_NONE);
 
 		SDL_RenderPresent(g_pRenderer); // draw to the screen
 

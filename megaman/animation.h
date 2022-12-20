@@ -102,6 +102,7 @@ public:
 				cut = cut->NextSiblingElement("cut");
 			}
 
+			anim.sprite.texture = t;
 			animList[currentAnim] = anim;
 			animElement = animElement->NextSiblingElement("animation");
 		}
@@ -116,7 +117,8 @@ public:
 	void draw(SDL_Renderer* &window, int x = 0, int y = 0)
 	{
 		animList[currentAnim].sprite.pos = { x,y };
-		//window.draw(animList[currentAnim].sprite);
+		Sprite sp = animList[currentAnim].sprite;
+		drawFrameScl(sp.texture, sp.pos.x, sp.pos.y, sp.rect.w, sp.rect.h, sp.rect.w, sp.rect.h, window, 0.0, 255, flip == false ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL);
 	}
 
 	void flip(bool b = 1) { animList[currentAnim].flip = b; }
