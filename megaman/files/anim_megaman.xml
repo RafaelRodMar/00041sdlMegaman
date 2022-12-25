@@ -27,7 +27,7 @@
   <cut w="30" x="414" y="463" h="45" row="1" col="1"/>
  </animation>
  <animation title="duck" delay="150">
-  <cut w="32" x="242" y="335" h="31" row="1" col="1"/>
+  <cut w="32" x="242" y="325" h="41" row="1" col="1"/>
  </animation>
  <animation title="shoot" delay="150">
   <cut w="41" x="2" y="150" h="41" row="1" col="1"/>

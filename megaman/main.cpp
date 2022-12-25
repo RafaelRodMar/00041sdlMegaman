@@ -146,7 +146,7 @@ int main(int argc, char* args[])
 	//create player
 	Object pl = lvl.GetObject("player");
 	//PLAYER Mario(anim, lvl, pl.rect.x, pl.rect.y);
-	PLAYER Mario(anim, lvl, 50, 50);
+	PLAYER Mario(anim, lvl, 450/2, 280/2);
 
 	srand(time(NULL));
 	Uint32 frameStart, frameTime;
