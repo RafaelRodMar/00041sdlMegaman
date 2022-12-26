@@ -325,18 +325,6 @@ int main(int argc, char* args[])
 		Mario.update(25);
 		enemy.update(25);
 
-		SDL_Rect iMarioRect;
-		iMarioRect.x = Mario.rect.x;
-		iMarioRect.y = Mario.rect.y;
-		iMarioRect.w = Mario.rect.w;
-		iMarioRect.h = Mario.rect.h;
-
-		SDL_Rect iEnemyRect;
-		iEnemyRect.x = enemy.rect.x;
-		iEnemyRect.y = enemy.rect.y;
-		iEnemyRect.w = enemy.rect.w;
-		iEnemyRect.h = enemy.rect.h;
-
 		if(SDL_HasIntersection(&getRectFromFRect(Mario.rect), &getRectFromFRect(enemy.rect)))
 		{
 			if (enemy.life)
