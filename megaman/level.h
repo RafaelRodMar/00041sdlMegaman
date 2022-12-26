@@ -1,13 +1,22 @@
 #pragma once
 
 #include <iostream>
+#include <vector>
+
+struct Tile {
+	SDL_Texture* texture;
+	SDL_Point pos;
+	SDL_Rect rect;
+};
+
+struct Layer
+{
+	int opacity;
+	std::vector<Tile> tiles;
+};
 
 class Level {
 public:
-
-	Level() {}
-	~Level() {}
-
 	static const int levelHeight = 17;
 	static const int levelWidth = 150;
 	SDL_Texture* tile;
@@ -31,6 +40,9 @@ public:
 	"PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP",
 	"PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP",
 	};
+
+	Level() {}
+	~Level() {}
 
 	void setTileset(std::string tileset) {
 		tile = loadTexture(tileset, g_pRenderer);
