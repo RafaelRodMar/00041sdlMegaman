@@ -53,5 +53,8 @@
     <ClInclude Include="..\originalCode\source\Player.hpp">
       <Filter>Archivos de recursos</Filter>
     </ClInclude>
+    <ClInclude Include="level.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

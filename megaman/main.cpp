@@ -1,6 +1,5 @@
 #include<SDL.h>
 #include<SDL_image.h>
-#include<SDL_mixer.h>
 #include<iostream>
 #include<string>
 #include<time.h>
@@ -49,32 +48,12 @@ void drawFrameScl(SDL_Texture* textureMap, int x, int y, int srcWidth, int srcHe
 	SDL_RenderCopyEx(pRenderer, textureMap, &srcRect, &destRect, angle, 0, flip); //Load current frame on the buffer game.
 }
 
-// SOUND / MUSIC
-Mix_Music* loadMusic(std::string fileName)
-{
-	Mix_Music* pMusic = Mix_LoadMUS(fileName.c_str());
-	if (pMusic == 0)
-	{
-		std::cout << "Could not load music: ERROR - " << Mix_GetError() << std::endl;
-		return false;
-	}
-
-	return pMusic;
+SDL_Rect getRectFromFRect(SDL_FRect fr) {
+	SDL_Rect r;
+	r.x = fr.x; r.y = fr.y;
+	r.h = fr.h; r.w = fr.w;
+	return r;
 }
-
-
-Mix_Chunk* loadSound(std::string fileName)
-{
-	Mix_Chunk* pChunk = Mix_LoadWAV(fileName.c_str());
-	if (pChunk == 0)
-	{
-		std::cout << "Could not load SFX: ERROR - " << Mix_GetError() << std::endl;
-		return false;
-	}
-
-	return pChunk;
-}
-
 
 // keyboard specific
 const Uint8* m_keystates;
@@ -99,54 +78,52 @@ bool isKeyDown(SDL_Scancode key)
 bool isRunning = true;
 
 float offsetX = 0, offsetY = 0;
+#include "level.h"
+Level lvl;
 
-
-const int H = 17;
-const int W = 150;
-
-
-std::string TileMap[H] = {
-"000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-"0                                                                                                                                                    0",
-"0                                                                                    w                                                               0",
-"0                   w                                  w                   w                                                                         0",
-"0                                      w                                       kk                                                                    0",
-"0                                                                             k  k    k    k                                                         0",
-"0                      c                                                      k      kkk  kkk  w                                                     0",
-"0                                                                       r     k       k    k                                                         0",
-"0                                                                      rr     k  k                                                                   0",
-"0                                                                     rrr      kk                                                                    0",
-"0               c    kckck                                           rrrr                                                                            0",
-"0                                      t0                           rrrrr                                                                            0",
-"0G                                     00              t0          rrrrrr            G                                                               0",
-"0           d    g       d             00              00         rrrrrrr                                                                            0",
-"PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP",
-"PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP",
-"PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP",
-};
-
-class PLAYER {
-
+class Entity {
 public:
-
 	float dx, dy;
-	SDL_FRect rect;  //position on map
-	bool onGround;
+	SDL_FRect rect; //real position
 	SDL_Texture* sprite;
-	SDL_FRect imgRect; //source of the image
-	SDL_Rect imgPos;   //position of the image (screen)
+	SDL_FRect imgRect; //rect from the source image
+	SDL_FPoint imgPos; //position of the image on screen
+	bool onGround;
 	float currentFrame;
+	bool life = true;
 	bool flip = false;
 
-	PLAYER(std::string image)
-	{
+	Entity(std::string name, std::string image, int x, int y) {
 		sprite = loadTexture(image, g_pRenderer);
-		rect = { 100, 180, 16, 16 };
 
-		dx = dy = 0.1;
+		if (name == "PLAYER")
+		{
+			rect = { 100,180, 16,16 };
+			dx = dy = 0.1;
+		}
+		else //ENEMY
+		{
+			rect = { (float)x, (float)y, (float)16, (float)16 };
+			dx = 0.05;
+		}
+
 		currentFrame = 0;
 	}
 
+	virtual void update(float num) = 0;
+	virtual void Collision(int num) = 0;
+
+	void draw() {
+		SDL_Rect dest = { imgPos.x, imgPos.y, 16, 16 };
+		SDL_SetTextureAlphaMod(sprite, 255);
+		SDL_RenderCopyEx(g_pRenderer, sprite, &getRectFromFRect(imgRect), &dest, 0.0, 0, flip == false ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL); //Load current frame on the buffer game.
+	}
+};
+
+class Player : public Entity {
+public:
+
+	Player(std::string name, std::string image, int x, int y) : Entity(name, image, x, y) {};
 
 	void update(float time)
 	{
@@ -175,14 +152,13 @@ public:
 		dx = 0;
 	}
 
-
 	void Collision(int num)
 	{
 
 		for (int i = rect.y / 16; i < (rect.y + rect.h) / 16; i++)
 			for (int j = rect.x / 16; j < (rect.x + rect.w) / 16; j++)
 			{
-				if ((TileMap[i][j] == 'P') || (TileMap[i][j] == 'k') || (TileMap[i][j] == '0') || (TileMap[i][j] == 'r') || (TileMap[i][j] == 't'))
+				if ((lvl.Tilemap[i][j] == 'P') || (lvl.Tilemap[i][j] == 'k') || (lvl.Tilemap[i][j] == '0') || (lvl.Tilemap[i][j] == 'r') || (lvl.Tilemap[i][j] == 't'))
 				{
 					if (dy > 0 && num == 1)
 					{
@@ -202,43 +178,23 @@ public:
 					}
 				}
 
-				if (TileMap[i][j] == 'c') {
-					// TileMap[i][j]=' '; 
+				if (lvl.Tilemap[i][j] == 'c') {
+					// lvl.Tilemap[i][j]=' '; 
 				}
 			}
 	}
-
 };
 
-class ENEMY
-{
-
+class Enemy : public Entity {
 public:
-	float dx, dy;
-	SDL_FRect rect;
-	SDL_Texture* sprite;
-	SDL_FRect imgRect;
-	SDL_Rect imgPos;
-	float currentFrame;
-	bool life;
-	bool flip = false;
 
-
-	void set(std::string image, int x, int y)
-	{
-		sprite = loadTexture(image, g_pRenderer);
-		rect = { (float)x, (float)y, (float)16, (float)16 };
-
-		dx = 0.05;
-		currentFrame = 0;
-		life = true;
-	}
+	Enemy(std::string name, std::string image, int x, int y) : Entity(name, image, x, y) {};
 
 	void update(float time)
 	{
 		rect.x += dx * time;
 
-		Collision();
+		Collision(0);
 
 
 		currentFrame += time * 0.005;
@@ -253,12 +209,12 @@ public:
 	}
 
 
-	void Collision()
+	void Collision(int num)
 	{
 
 		for (int i = rect.y / 16; i < (rect.y + rect.h) / 16; i++)
 			for (int j = rect.x / 16; j < (rect.x + rect.w) / 16; j++)
-				if ((TileMap[i][j] == 'P') || (TileMap[i][j] == '0'))
+				if ((lvl.Tilemap[i][j] == 'P') || (lvl.Tilemap[i][j] == '0'))
 				{
 					if (dx > 0)
 					{
@@ -271,7 +227,6 @@ public:
 
 				}
 	}
-
 };
 
 const int FPS = 60;
@@ -317,21 +272,12 @@ int main(int argc, char* args[])
 	}
 
 	//player and enemy
-	PLAYER Mario("mario_tileset.png");
-	ENEMY  enemy;
-	enemy.set("mario_tileset.png", 48 * 16, 13 * 16);
+	Player Mario("PLAYER", "mario_tileset.png", 0, 0);
+	Enemy enemy("ENEMY", "mario_tileset.png", 48 * 16, 13 * 16);
 
 	//scenery
-	SDL_Texture* tile = loadTexture("mario_tileset.png", g_pRenderer);
+	lvl.setTileset("mario_tileset.png");
 
-	//music and sound
-	Mix_OpenAudio(22050, AUDIO_S16, 2, (4096 / 2));
-	Mix_Music* music = loadMusic("Mario_Theme.ogg");
-	Mix_Volume(-1, 16); //adjust sound/music volume for all channels
-	Mix_VolumeMusic(16);
-	Mix_PlayMusic(music, 1);
-	Mix_Chunk* jumpSound = loadSound("Jump.wav");
-	
 	srand(time(NULL));
 
 	Uint32 frameStart, frameTime;
@@ -371,7 +317,6 @@ int main(int argc, char* args[])
 			{
 				Mario.dy = -0.27;
 				Mario.onGround = false;
-				Mix_PlayChannel(-1, jumpSound, 0);
 			}
 		}
 
@@ -392,7 +337,7 @@ int main(int argc, char* args[])
 		iEnemyRect.w = enemy.rect.w;
 		iEnemyRect.h = enemy.rect.h;
 
-		if ( SDL_HasIntersection(&iMarioRect, &iEnemyRect) )
+		if(SDL_HasIntersection(&getRectFromFRect(Mario.rect), &getRectFromFRect(enemy.rect)))
 		{
 			if (enemy.life)
 			{
@@ -409,83 +354,11 @@ int main(int argc, char* args[])
 		SDL_RenderClear(g_pRenderer);
 
 		//draw background
-		SDL_Rect srcTile, destTile;
-		for (int i = 0; i < H; i++)
-			for (int j = 0; j < W; j++)
-			{
-				if (TileMap[i][j] == 'P')  srcTile = { 143 - 16 * 3, 112, 16, 16 };
+		lvl.draw();
 
-				if (TileMap[i][j] == 'k')  srcTile = { 143, 112, 16, 16 };
-
-				if (TileMap[i][j] == 'c')  srcTile = { 143 - 16, 112, 16, 16 };
-
-				if (TileMap[i][j] == 't')  srcTile = { 0, 47, 32, 95 - 47 };
-
-				if (TileMap[i][j] == 'g')  srcTile = { 0, 16 * 9 - 5, 3 * 16, 16 * 2 + 5 };
-
-				if (TileMap[i][j] == 'G')  srcTile = { 145, 222, 222 - 145, 255 - 222 };
-
-				if (TileMap[i][j] == 'd')  srcTile = { 0, 106, 74, 127 - 106 };
-
-				if (TileMap[i][j] == 'w')  srcTile = { 99, 224, 140 - 99, 255 - 224 };
-
-				if (TileMap[i][j] == 'r')  srcTile = { 143 - 32, 112, 16, 16 };
-
-				if ((TileMap[i][j] == ' ') || (TileMap[i][j] == '0')) continue;
-
-				destTile = {(int) (j * 16 - offsetX), (int) (i * 16 - offsetY), 16, 16 };
-				SDL_SetTextureAlphaMod(tile, 255);
-				SDL_RenderCopyEx(g_pRenderer, tile, &srcTile, &destTile, 0.0, 0, SDL_FLIP_NONE); //Load current frame on the buffer game.
-			}
-
-		//drawing test
-		//SDL_Rect srcRect; //source rectangle
-		//SDL_Rect destRect; //destination rectangle
-
-		//srcRect.x = 0;
-		//srcRect.y = 0;
-		//srcRect.w = 400;
-		//destRect.w = 400;
-		//srcRect.h = 250;
-		//destRect.h = 250;
-		//destRect.x = 0;
-		//destRect.y = 0;
-
-		//SDL_SetTextureAlphaMod(Mario.sprite, 255);
-		//SDL_RenderCopyEx(g_pRenderer, Mario.sprite, &srcRect, &destRect, 0.0, 0, SDL_FLIP_NONE); //Load current frame on the buffer game.
-		//end drawing test
-
-		//draw Mario
-		SDL_Rect srcMario; //source rectangle
-		SDL_Rect destMario; //destination rectangle
-
-		srcMario.x = Mario.imgRect.x;
-		srcMario.y = Mario.imgRect.y;
-		srcMario.w = 16;
-		destMario.w = 16;
-		srcMario.h = 16;
-		destMario.h = 16;
-		destMario.x = Mario.imgPos.x;
-		destMario.y = Mario.imgPos.y;
-
-		SDL_SetTextureAlphaMod(Mario.sprite, 255);
-		SDL_RenderCopyEx(g_pRenderer, Mario.sprite, &srcMario, &destMario, 0.0, 0, Mario.flip == false ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL); //Load current frame on the buffer game.
-
-		//draw Enemy
-		SDL_Rect srcEnemy; //source rectangle
-		SDL_Rect destEnemy; //destination rectangle
-
-		srcEnemy.x = enemy.imgRect.x;
-		srcEnemy.y = enemy.imgRect.y;
-		srcEnemy.w = 16;
-		destEnemy.w = 16;
-		srcEnemy.h = 16;
-		destEnemy.h = 16;
-		destEnemy.x = enemy.imgPos.x;
-		destEnemy.y = enemy.imgPos.y;
-
-		SDL_SetTextureAlphaMod(enemy.sprite, 255);
-		SDL_RenderCopyEx(g_pRenderer, enemy.sprite, &srcEnemy, &destEnemy, 0.0, 0, enemy.flip == false ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL); //Load current frame on the buffer game.
+		//draw Mario and enemy
+		Mario.draw();
+		enemy.draw();
 
 		SDL_RenderPresent(g_pRenderer); // draw to the screen
 
@@ -501,12 +374,9 @@ int main(int argc, char* args[])
 	}
 	
 	std::cout << "game closing...\n";
-	Mix_CloseAudio();
 	SDL_DestroyTexture(Mario.sprite);
 	SDL_DestroyTexture(enemy.sprite);
-	SDL_DestroyTexture(tile);
-	Mix_FreeMusic(music);
-	Mix_FreeChunk(jumpSound);
+	SDL_DestroyTexture(lvl.tile);
 
 	return 0;
 }
