@@ -366,7 +366,7 @@ int main(int argc, char* args[])
 	std::cout << "game closing...\n";
 	SDL_DestroyTexture(Mario.sprite);
 	SDL_DestroyTexture(enemy.sprite);
-	SDL_DestroyTexture(lvl.tile);
+	SDL_DestroyTexture(lvl.tilesetImage);
 
 	return 0;
 }

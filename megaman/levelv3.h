@@ -38,16 +38,19 @@ struct Layer
 
 class Level {
 public:
-	static const int levelHeight = 17;
-	static const int levelWidth = 150;
-	SDL_Texture* tile;
 	SDL_Texture* tilesetImage;
-	SDL_Point GetTextureSize(SDL_Texture* t);
-	std::vector<Layer> layers;
 	int width, height, tileWidth, tileHeight;
 	int firstTileID;
 
 	bool loadFromFile(std::string filename);
+	
+	Object GetObject(std::string name);
+	std::vector<Object> GetObjects(std::string name);
+	std::vector<Object> GetAllObjects();
+
+	SDL_Point GetTextureSize(SDL_Texture* t);
+	std::vector<Layer> layers;
+	std::vector<Object> objects;
 
 	Level() {}
 	~Level() {}
@@ -63,6 +66,24 @@ public:
 		}
 	}
 };
+
+///////////////////
+///////////////////
+
+int Object::GetPropertyInt(std::string name)
+{
+	return atoi(properties[name].c_str());
+}
+
+float Object::GetPropertyFloat(std::string name)
+{
+	return strtod(properties[name].c_str(), NULL);
+}
+
+std::string Object::GetPropertyString(std::string name)
+{
+	return properties[name];
+}
 
 SDL_Point Level::GetTextureSize(SDL_Texture* t)
 {
@@ -218,5 +239,124 @@ bool Level::loadFromFile(std::string filename)
 		layerElement = layerElement->NextSiblingElement("layer");
 	}
 
+	// parse the objects
+	TiXmlElement *objectGroupElement;
+
+	if (map->FirstChildElement("objectgroup") != NULL)
+	{
+		objectGroupElement = map->FirstChildElement("objectgroup");
+		while (objectGroupElement)
+		{
+			// <object> tag
+			TiXmlElement *objectElement;
+			objectElement = objectGroupElement->FirstChildElement("object");
+
+			while (objectElement)
+			{
+				// get the attributes of the objects
+				std::string objectType;
+				if (objectElement->Attribute("type") != NULL)
+				{
+					objectType = objectElement->Attribute("type");
+				}
+				std::string objectName;
+				if (objectElement->Attribute("name") != NULL)
+				{
+					objectName = objectElement->Attribute("name");
+				}
+				int x = atoi(objectElement->Attribute("x"));
+				int y = atoi(objectElement->Attribute("y"));
+
+				int width, height;
+
+				Tile sprite;
+				sprite.texture = tilesetImage;
+				sprite.rect = { 0,0,0,0 };
+				sprite.pos = { x, y };
+
+				if (objectElement->Attribute("width") != NULL)
+				{
+					width = atoi(objectElement->Attribute("width"));
+					height = atoi(objectElement->Attribute("height"));
+				}
+				else
+				{
+					width = subRects[atoi(objectElement->Attribute("gid")) - firstTileID].w;
+					height = subRects[atoi(objectElement->Attribute("gid")) - firstTileID].h;
+					sprite.rect = subRects[atoi(objectElement->Attribute("gid")) - firstTileID];
+				}
+
+				// create the object
+				Object object;
+				object.name = objectName;
+				object.type = objectType;
+				object.sprite = sprite;
+
+				SDL_FRect objectRect;
+				objectRect.y = y;
+				objectRect.x = x;
+				objectRect.h = height;
+				objectRect.w = width;
+				object.rect = objectRect;
+
+				// set properties of the object
+				TiXmlElement *properties;
+				properties = objectElement->FirstChildElement("properties");
+				if (properties != NULL)
+				{
+					TiXmlElement *prop;
+					prop = properties->FirstChildElement("property");
+					if (prop != NULL)
+					{
+						while (prop)
+						{
+							std::string propertyName = prop->Attribute("name");
+							std::string propertyValue = prop->Attribute("value");
+
+							object.properties[propertyName] = propertyValue;
+
+							prop = prop->NextSiblingElement("property");
+						}
+					}
+				}
+
+
+				objects.push_back(object);
+
+				objectElement = objectElement->NextSiblingElement("object");
+			}
+			objectGroupElement = objectGroupElement->NextSiblingElement("objectgroup");
+		}
+	}
+	else
+	{
+		std::cout << "No object layers found..." << std::endl;
+	}
+
 	return true;
 }
+
+Object Level::GetObject(std::string name)
+{
+	// get object by name
+	for (int i = 0; i < objects.size(); i++)
+		if (objects[i].name == name)
+			return objects[i];
+}
+
+std::vector<Object> Level::GetObjects(std::string name)
+{
+	// get all the objects with the same name
+	std::vector<Object> vec;
+	for (int i = 0; i < objects.size(); i++)
+		if (objects[i].name == name)
+			vec.push_back(objects[i]);
+
+	return vec;
+}
+
+
+std::vector<Object> Level::GetAllObjects()
+{
+	return objects;
+};
