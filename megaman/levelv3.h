@@ -23,6 +23,11 @@ struct Object
 	std::map<std::string, std::string> properties;
 
 	Tile sprite;
+
+	SDL_Rect getRect() {
+		SDL_Rect r = { rect.x, rect.y, rect.w, rect.h };
+		return r;
+	}
 };
 
 struct Layer
@@ -36,76 +41,182 @@ public:
 	static const int levelHeight = 17;
 	static const int levelWidth = 150;
 	SDL_Texture* tile;
+	SDL_Texture* tilesetImage;
+	SDL_Point GetTextureSize(SDL_Texture* t);
 	std::vector<Layer> layers;
 	int width, height, tileWidth, tileHeight;
+	int firstTileID;
 
-	std::string Tilemap[levelHeight] = {
-	"000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-	"0                                                                                                                                                    0",
-	"0                                                                                    w                                                               0",
-	"0                   w                                  w                   w                                                                         0",
-	"0                                      w                                       kk                                                                    0",
-	"0                                                                             k  k    k    k                                                         0",
-	"0                      c                                                      k      kkk  kkk  w                                                     0",
-	"0                                                                       r     k       k    k                                                         0",
-	"0                                                                      rr     k  k                                                                   0",
-	"0                                                                     rrr      kk                                                                    0",
-	"0               c    kckck                                           rrrr                                                                            0",
-	"0                                      t0                           rrrrr                                                                            0",
-	"0G                                     00              t0          rrrrrr            G                                                               0",
-	"0           d    g       d             00              00         rrrrrrr                                                                            0",
-	"PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP",
-	"PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP",
-	"PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP",
-	};
+	bool loadFromFile(std::string filename);
 
-	Level() {
-		loadFromString();
-	}
+	Level() {}
 	~Level() {}
-
-	//load map from string Tilemap
-	bool loadFromString() {
-		width = levelWidth;
-		height = levelHeight;
-		tileWidth = tileHeight = 16;
-		Layer layer;
-
-		for (int i = 0; i < height; i++) {
-			for (int j = 0; j < width; j++) {
-				if ((Tilemap[i][j] == ' ') || (Tilemap[i][j] == '0')) continue;
-				Tile cell;
-				cell.texture = tile;
-				if (Tilemap[i][j] == 'P')  cell.rect = { 143 - 16 * 3, 112, 16, 16 };
-				if (Tilemap[i][j] == 'k')  cell.rect = { 143, 112, 16, 16 };
-				if (Tilemap[i][j] == 'c')  cell.rect = { 143 - 16, 112, 16, 16 };
-				if (Tilemap[i][j] == 't')  cell.rect = { 0, 47, 32, 95 - 47 };
-				if (Tilemap[i][j] == 'g')  cell.rect = { 0, 16 * 9 - 5, 3 * 16, 16 * 2 + 5 };
-				if (Tilemap[i][j] == 'G')  cell.rect = { 145, 222, 222 - 145, 255 - 222 };
-				if (Tilemap[i][j] == 'd')  cell.rect = { 0, 106, 74, 127 - 106 };
-				if (Tilemap[i][j] == 'w')  cell.rect = { 99, 224, 140 - 99, 255 - 224 };
-				if (Tilemap[i][j] == 'r')  cell.rect = { 143 - 32, 112, 16, 16 };
-				cell.pos = { j * tileWidth , i * tileHeight };
-				layer.tiles.push_back(cell);
-			}
-		}
-
-		layers.push_back(layer);
-		return true;
-	}
-
-	void setTileset(std::string tileset) {
-		tile = loadTexture(tileset, g_pRenderer);
-	}
 
 	void draw() {
 		SDL_Rect destTile;
 		for (int layer = 0; layer < layers.size(); layer++) {
 			for (int cell = 0; cell < layers[layer].tiles.size(); cell++) {
 				destTile = { layers[layer].tiles[cell].pos.x - (int)offsetX, (int)layers[layer].tiles[cell].pos.y - (int)offsetY, tileWidth, tileHeight };
-				SDL_SetTextureAlphaMod(tile, 255);
-				SDL_RenderCopyEx(g_pRenderer, tile, &layers[layer].tiles[cell].rect, &destTile, 0.0, 0, SDL_FLIP_NONE);
+				SDL_SetTextureAlphaMod(tilesetImage, 255);
+				SDL_RenderCopyEx(g_pRenderer, tilesetImage, &layers[layer].tiles[cell].rect, &destTile, 0.0, 0, SDL_FLIP_NONE);
 			}
 		}
 	}
 };
+
+SDL_Point Level::GetTextureSize(SDL_Texture* t)
+{
+	SDL_Point size;
+	SDL_QueryTexture(t, NULL, NULL, &size.x, &size.y);
+	return size;
+}
+
+bool Level::loadFromFile(std::string filename)
+{
+	TiXmlDocument levelFile(filename.c_str());
+
+	// try to open xml document
+	if (!levelFile.LoadFile())
+	{
+		std::cout << "Loading level \"" << filename << "\" failed." << std::endl;
+		return false;
+	}
+
+	// parse the "map" tag
+	TiXmlElement *map;
+	map = levelFile.FirstChildElement("map");
+
+	// <map version="1.0" orientation="orthogonal"
+	// width="10" height="10" tilewidth="34" tileheight="34">
+	width = atoi(map->Attribute("width"));
+	height = atoi(map->Attribute("height"));
+	tileWidth = atoi(map->Attribute("tilewidth"));
+	tileHeight = atoi(map->Attribute("tileheight"));
+
+	// parse the "tileset" tag found into the "map" tag
+	TiXmlElement *tilesetElement;
+	tilesetElement = map->FirstChildElement("tileset");
+	firstTileID = atoi(tilesetElement->Attribute("firstgid"));
+
+	// parse source image for tileset
+	TiXmlElement *image;
+	image = tilesetElement->FirstChildElement("image");
+	std::string imagepath = image->Attribute("source");
+
+	// load the image
+	SDL_Surface* img = IMG_Load(imagepath.c_str());
+
+	if (img == 0)
+	{
+		std::cout << "Failed to load tile sheet." << std::endl;
+		std::cout << SDL_GetError() << " " << imagepath << std::endl;
+		return false;
+	}
+
+	tilesetImage = SDL_CreateTextureFromSurface(g_pRenderer, img);
+	SDL_FreeSurface(img);
+
+	if (tilesetImage == 0)
+	{
+		std::cout << "error creating texture of file" << imagepath << std::endl;
+		return false;
+	}
+
+	SDL_Point size = GetTextureSize(tilesetImage);
+
+	// get number of rows and columns of the texture by tile size
+	int columns = size.x / tileWidth;
+	int rows = size.y / tileHeight;
+
+	// get the rect for all the tiles (TextureRect)
+	std::vector<SDL_Rect> subRects;
+
+	for (int y = 0; y < rows; y++)
+		for (int x = 0; x < columns; x++)
+		{
+			SDL_Rect rect;
+
+			rect.y = y * tileHeight;
+			rect.h = tileHeight;
+			rect.x = x * tileWidth;
+			rect.w = tileWidth;
+
+			subRects.push_back(rect);
+		}
+
+	// parse the layers
+	TiXmlElement *layerElement;
+	layerElement = map->FirstChildElement("layer");
+	while (layerElement)
+	{
+		//new layer
+		Layer layer;
+
+		// set the opacity of the layers
+		if (layerElement->Attribute("opacity") != NULL)
+		{
+			float opacity = strtod(layerElement->Attribute("opacity"), NULL);
+			layer.opacity = 255 * opacity;
+		}
+		else
+		{
+			layer.opacity = 255;
+		}
+
+		// process data of the layer
+		TiXmlElement *layerDataElement;
+		layerDataElement = layerElement->FirstChildElement("data");
+
+		if (layerDataElement == NULL)
+		{
+			std::cout << "Bad map. No layer information found." << std::endl;
+		}
+
+		// tile data
+		TiXmlElement *tileElement;
+		tileElement = layerDataElement->FirstChildElement("tile");
+
+		if (tileElement == NULL)
+		{
+			std::cout << "Bad map. No tile information found." << std::endl;
+			return false;
+		}
+
+		int x = 0;
+		int y = 0;
+
+		while (tileElement)
+		{
+			int tileGID = atoi(tileElement->Attribute("gid"));
+			int subRectToUse = tileGID - firstTileID;
+
+			// set the subrect of the texture for every tile
+			if (subRectToUse >= 0)
+			{
+				Tile sprite;
+				sprite.texture = tilesetImage;
+				sprite.rect = subRects[subRectToUse];
+				sprite.pos = { x * tileWidth, y * tileHeight };
+
+				layer.tiles.push_back(sprite);
+			}
+
+			tileElement = tileElement->NextSiblingElement("tile");
+
+			x++;
+			if (x >= width)
+			{
+				x = 0;
+				y++;
+				if (y >= height)
+					y = 0;
+			}
+		}
+
+		layers.push_back(layer);
+
+		layerElement = layerElement->NextSiblingElement("layer");
+	}
+
+	return true;
+}

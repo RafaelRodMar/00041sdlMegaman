@@ -278,7 +278,7 @@ int main(int argc, char* args[])
 	Enemy enemy("ENEMY", "mario_tileset.png", 48 * 16, 13 * 16);
 
 	//scenery
-	lvl.setTileset("mario_tileset.png");
+	lvl.loadFromFile("files/Level1.tmx");
 
 	srand(time(NULL));
 
