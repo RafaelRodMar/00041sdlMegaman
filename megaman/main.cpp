@@ -85,7 +85,7 @@ Level lvl;
 
 class Entity {
 public:
-	float dx, dy;
+	float dx, dy, x, y, w, h;
 	SDL_FRect rect; //real position
 	SDL_Texture* sprite;
 	SDL_FRect imgRect; //rect from the source image
@@ -94,13 +94,14 @@ public:
 	float currentFrame;
 	bool life = true;
 	bool flip = false;
+	std::vector<Object> obj;
 
 	Entity(std::string name, std::string image, int x, int y) {
 		sprite = loadTexture(image, g_pRenderer);
 
 		if (name == "PLAYER")
 		{
-			rect = { 100,180, 16,16 };
+			rect = { 100,50, 16,16 };
 			dx = dy = 0.1;
 		}
 		else //ENEMY
@@ -125,7 +126,9 @@ public:
 class Player : public Entity {
 public:
 
-	Player(std::string name, std::string image, int x, int y) : Entity(name, image, x, y) {};
+	Player(std::string name, std::string image, Level &lev, int x, int y) : Entity(name, image, x, y) {
+		obj = lev.GetAllObjects();
+	};
 
 	void update(float time)
 	{
@@ -156,35 +159,43 @@ public:
 
 	void Collision(int num)
 	{
-
-		for (int i = rect.y / 16; i < (rect.y + rect.h) / 16; i++)
-			for (int j = rect.x / 16; j < (rect.x + rect.w) / 16; j++)
+		for (int i = 0; i < obj.size(); i++)
+			if(SDL_HasIntersection(&getRectFromFRect(rect), &getRectFromFRect(obj[i].rect)))
 			{
-				if ((lvl.Tilemap[i][j] == 'P') || (lvl.Tilemap[i][j] == 'k') || (lvl.Tilemap[i][j] == '0') || (lvl.Tilemap[i][j] == 'r') || (lvl.Tilemap[i][j] == 't'))
+				if (obj[i].name == "solid")
 				{
-					if (dy > 0 && num == 1)
-					{
-						rect.y = i * 16 - rect.h;  dy = 0;   onGround = true;
-					}
-					if (dy < 0 && num == 1)
-					{
-						rect.y = i * 16 + 16;   dy = 0;
-					}
-					if (dx > 0 && num == 0)
-					{
-						rect.x = j * 16 - rect.w;
-					}
-					if (dx < 0 && num == 0)
-					{
-						rect.x = j * 16 + 16;
-					}
+					std::cout << "choque con solid" << std::endl;
+					if (dy > 0 && num == 1) { y = obj[i].rect.y - h;  dy = 0;}
+					if (dy < 0 && num == 1) { y = obj[i].rect.y + obj[i].rect.h;   dy = 0; }
+					if (dx > 0 && num == 0) { x = obj[i].rect.x - w; }
+					if (dx < 0 && num == 0) { x = obj[i].rect.x + obj[i].rect.w; }
 				}
 
-				if (lvl.Tilemap[i][j] == 'c') {
-					// lvl.Tilemap[i][j]=' '; 
+				if (obj[i].name == "SlopeLeft")
+				{
+					SDL_FRect r = obj[i].rect;
+					int y0 = (x + w / 2 - r.x) * r.h / r.w + r.y - h;
+					if (y > y0)
+						if (x + w / 2 > r.x)
+						{
+							y = y0; dy = 0;
+						}
 				}
+
+				if (obj[i].name == "SlopeRight")
+				{
+					SDL_FRect r = obj[i].rect;
+					int y0 = -(x + w / 2 - r.x) * r.h / r.w + r.y + r.h - h;
+					if (y > y0)
+						if (x + w / 2 < r.x + r.w)
+						{
+							y = y0; dy = 0;
+						}
+				}
+
 			}
 	}
+
 };
 
 class Enemy : public Entity {
@@ -213,21 +224,6 @@ public:
 
 	void Collision(int num)
 	{
-
-		for (int i = rect.y / 16; i < (rect.y + rect.h) / 16; i++)
-			for (int j = rect.x / 16; j < (rect.x + rect.w) / 16; j++)
-				if ((lvl.Tilemap[i][j] == 'P') || (lvl.Tilemap[i][j] == '0'))
-				{
-					if (dx > 0)
-					{
-						rect.x = j * 16 - rect.w; dx *= -1;
-					}
-					else if (dx < 0)
-					{
-						rect.x = j * 16 + 16;  dx *= -1;
-					}
-
-				}
 	}
 };
 
@@ -273,12 +269,12 @@ int main(int argc, char* args[])
 		return false; // SDL init fail
 	}
 
-	//player and enemy
-	Player Mario("PLAYER", "mario_tileset.png", 0, 0);
-	Enemy enemy("ENEMY", "mario_tileset.png", 48 * 16, 13 * 16);
-
 	//scenery
 	lvl.loadFromFile("files/Level1.tmx");
+
+	//player and enemy
+	Player Mario("PLAYER", "mario_tileset.png", lvl, 0, 0);
+	Enemy enemy("ENEMY", "mario_tileset.png", 48 * 16, 13 * 16);
 
 	srand(time(NULL));
 
@@ -337,6 +333,7 @@ int main(int argc, char* args[])
 		}
 
 		if (Mario.rect.x > 200) offsetX = Mario.rect.x - 200;
+		if (Mario.rect.y > 200) offsetY = Mario.rect.y - 200;
 
 
 		//draw
