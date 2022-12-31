@@ -65,12 +65,6 @@
     <ClInclude Include="..\originalCode\source\Player.hpp">
       <Filter>Archivos de recursos</Filter>
     </ClInclude>
-    <ClInclude Include="level.h">
-      <Filter>Archivos de encabezado</Filter>
-    </ClInclude>
-    <ClInclude Include="levelv2.h">
-      <Filter>Archivos de encabezado</Filter>
-    </ClInclude>
     <ClInclude Include="levelv3.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
@@ -78,6 +72,9 @@
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
     <ClInclude Include="TinyXML\tinyxml.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="animation.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
   </ItemGroup>

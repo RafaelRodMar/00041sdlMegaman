@@ -78,9 +78,8 @@ bool isKeyDown(SDL_Scancode key)
 bool isRunning = true;
 
 float offsetX = 0, offsetY = 0;
-//#include "level.h"
-//#include "levelv2.h"
 #include "levelv3.h"
+#include "animation.h"
 Level lvl;
 
 class Entity {
@@ -130,8 +129,22 @@ public:
 		obj = lev.GetAllObjects();
 	};
 
+	void keyboard() {
+		if (isKeyDown(SDL_SCANCODE_LEFT)) dx = -0.1;
+		if (isKeyDown(SDL_SCANCODE_RIGHT)) dx = 0.1;
+		if (isKeyDown(SDL_SCANCODE_UP))
+		{
+			if (onGround)
+			{
+				dy = -0.27;
+				onGround = false;
+			}
+		}
+	}
+
 	void update(float time)
 	{
+		keyboard();
 
 		rect.x += dx * time;
 		Collision(0);
@@ -273,6 +286,12 @@ int main(int argc, char* args[])
 	//scenery
 	lvl.loadFromFile("files/Level1.tmx");
 
+	//load animations
+	SDL_Texture* megaman_t = loadTexture("files/images/megaman.png", g_pRenderer);
+	AnimationManager anim;
+	anim.loadFromXML("files/anim_megaman.xml", megaman_t);
+	anim.animList["jump"].loop = 0;
+
 	//player and enemy
 	Player Mario("PLAYER", "mario_tileset.png", lvl, 0, 0);
 	Enemy enemy("ENEMY", "mario_tileset.png", 48 * 16, 13 * 16);
@@ -307,18 +326,6 @@ int main(int argc, char* args[])
 				break;
 			}
 		}
-
-		if (isKeyDown(SDL_SCANCODE_LEFT)) Mario.dx = -0.1;
-		if (isKeyDown(SDL_SCANCODE_RIGHT)) Mario.dx = 0.1;
-		if (isKeyDown(SDL_SCANCODE_UP))
-		{
-			if (Mario.onGround)
-			{
-				Mario.dy = -0.27;
-				Mario.onGround = false;
-			}
-		}
-
 
 		//update
 		Mario.update(25);
@@ -364,6 +371,7 @@ int main(int argc, char* args[])
 	std::cout << "game closing...\n";
 	SDL_DestroyTexture(Mario.sprite);
 	SDL_DestroyTexture(enemy.sprite);
+	SDL_DestroyTexture(megaman_t);
 	SDL_DestroyTexture(lvl.tilesetImage);
 
 	return 0;
