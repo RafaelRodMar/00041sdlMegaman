@@ -164,32 +164,33 @@ public:
 			{
 				if (obj[i].name == "solid")
 				{
-					std::cout << "choque con solid" << std::endl;
-					if (dy > 0 && num == 1) { y = obj[i].rect.y - h;  dy = 0;}
-					if (dy < 0 && num == 1) { y = obj[i].rect.y + obj[i].rect.h;   dy = 0; }
-					if (dx > 0 && num == 0) { x = obj[i].rect.x - w; }
-					if (dx < 0 && num == 0) { x = obj[i].rect.x + obj[i].rect.w; }
+					//std::cout << "choque con solid" << std::endl;
+					if (dy > 0 && num == 1) { rect.y = obj[i].rect.y - rect.h;  dy = 0; onGround = true; }
+					if (dy < 0 && num == 1) { rect.y = obj[i].rect.y + obj[i].rect.h;   dy = 0; }
+					if (dx > 0 && num == 0) { rect.x = obj[i].rect.x - rect.w; }
+					if (dx < 0 && num == 0) { rect.x = obj[i].rect.x + obj[i].rect.w; }
 				}
 
 				if (obj[i].name == "SlopeLeft")
 				{
 					SDL_FRect r = obj[i].rect;
-					int y0 = (x + w / 2 - r.x) * r.h / r.w + r.y - h;
-					if (y > y0)
-						if (x + w / 2 > r.x)
+					int y0 = (rect.x + rect.w / 2 - r.x) * r.h / r.w + r.y - rect.h;
+					if (rect.y > y0)
+						if (rect.x + rect.w / 2 > r.x)
 						{
-							y = y0; dy = 0;
+							rect.y = y0; dy = 0; onGround = true;
 						}
 				}
 
 				if (obj[i].name == "SlopeRight")
 				{
+					//std::cout << "collision with sloperight" << std::endl;
 					SDL_FRect r = obj[i].rect;
-					int y0 = -(x + w / 2 - r.x) * r.h / r.w + r.y + r.h - h;
-					if (y > y0)
-						if (x + w / 2 < r.x + r.w)
+					int y0 = -(rect.x + rect.w / 2 - r.x) * r.h / r.w + r.y + r.h - rect.h;
+					if (rect.y > y0)
+						if (rect.x + rect.w / 2 < r.x + r.w)
 						{
-							y = y0; dy = 0;
+							rect.y = y0; dy = 0; onGround = true;
 						}
 				}
 
@@ -332,9 +333,9 @@ int main(int argc, char* args[])
 			}
 		}
 
-		if (Mario.rect.x > 200) offsetX = Mario.rect.x - 200;
-		if (Mario.rect.y > 200) offsetY = Mario.rect.y - 200;
-
+		if (Mario.rect.x > 200) offsetX = (int)(Mario.rect.x - 200);
+		if (Mario.rect.y > 200) offsetY = (int)(Mario.rect.y - 200);
+		//std::cout << Mario.rect.x << "," << Mario.rect.y << std::endl;
 
 		//draw
 		SDL_SetRenderDrawColor(g_pRenderer, 107, 140, 255, 255);
