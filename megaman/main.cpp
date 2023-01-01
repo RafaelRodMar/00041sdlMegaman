@@ -86,9 +86,7 @@ class Entity {
 public:
 	float dx, dy, x, y, w, h;
 	SDL_FRect rect; //real position
-	SDL_Texture* sprite;
-	SDL_FRect imgRect; //rect from the source image
-	SDL_FPoint imgPos; //position of the image on screen
+	Tile sprite;
 	bool onGround;
 	float currentFrame;
 	bool life = true;
@@ -96,7 +94,7 @@ public:
 	std::vector<Object> obj;
 
 	Entity(std::string name, std::string image, int x, int y) {
-		sprite = loadTexture(image, g_pRenderer);
+		sprite.texture = loadTexture(image, g_pRenderer);
 
 		if (name == "PLAYER")
 		{
@@ -116,9 +114,9 @@ public:
 	virtual void Collision(int num) = 0;
 
 	void draw() {
-		SDL_Rect dest = { imgPos.x, imgPos.y, 16, 16 };
-		SDL_SetTextureAlphaMod(sprite, 255);
-		SDL_RenderCopyEx(g_pRenderer, sprite, &getRectFromFRect(imgRect), &dest, 0.0, 0, flip == false ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL); //Load current frame on the buffer game.
+		SDL_Rect dest = { sprite.pos.x, sprite.pos.y, 16, 16 };
+		SDL_SetTextureAlphaMod(sprite.texture, 255);
+		SDL_RenderCopyEx(g_pRenderer, sprite.texture, &sprite.rect, &dest, 0.0, 0, flip == false ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL); //Load current frame on the buffer game.
 	}
 };
 
@@ -136,7 +134,7 @@ public:
 		{
 			if (onGround)
 			{
-				dy = -0.27;
+				dy = -0.35;
 				onGround = false;
 			}
 		}
@@ -159,13 +157,13 @@ public:
 		currentFrame += time * 0.005;
 		if (currentFrame > 3) currentFrame -= 3;
 
-		imgRect = { (float)(112 + 31 * int(currentFrame)), 144, 16,16 };
+		sprite.rect = { 112 + 31 * int(currentFrame), 144, 16, 16 };
 		if (dx > 0) flip = false;
 		if (dx < 0) flip = true;
-		if (dx == 0) imgRect = { 80, 144, 16, 16 };
+		if (dx == 0) sprite.rect = { 80, 144, 16, 16 };
 
-		imgPos.x = rect.x - offsetX;
-		imgPos.y = rect.y - offsetY;
+		sprite.pos.x = rect.x - offsetX;
+		sprite.pos.y = rect.y - offsetY;
 
 		dx = 0;
 	}
@@ -227,11 +225,11 @@ public:
 		currentFrame += time * 0.005;
 		if (currentFrame >= 2) currentFrame -= 2;
 
-		imgRect = { (float)18 * int(currentFrame), (float)0, (float)16, 16.0 };
-		if (!life) imgRect = { 58, 0, 16, 16 };
+		sprite.rect = { 18 * int(currentFrame), 0, 16, 16 };
+		if (!life) sprite.rect = { 58, 0, 16, 16 };
 
-		imgPos.x = rect.x - offsetX;
-		imgPos.y = rect.y - offsetY;
+		sprite.pos.x = rect.x - offsetX;
+		sprite.pos.y = rect.y - offsetY;
 
 	}
 
@@ -336,7 +334,7 @@ int main(int argc, char* args[])
 			if (enemy.life)
 			{
 				if (Mario.dy > 0) { enemy.dx = 0; Mario.dy = -0.2; enemy.life = false; }
-				else SDL_SetTextureColorMod(Mario.sprite, 255, 0, 0);
+				else SDL_SetTextureColorMod(Mario.sprite.texture, 255, 0, 0);
 			}
 		}
 
@@ -369,8 +367,8 @@ int main(int argc, char* args[])
 	}
 	
 	std::cout << "game closing...\n";
-	SDL_DestroyTexture(Mario.sprite);
-	SDL_DestroyTexture(enemy.sprite);
+	SDL_DestroyTexture(Mario.sprite.texture);
+	SDL_DestroyTexture(enemy.sprite.texture);
 	SDL_DestroyTexture(megaman_t);
 	SDL_DestroyTexture(lvl.tilesetImage);
 
