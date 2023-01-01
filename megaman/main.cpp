@@ -1,4 +1,4 @@
-#include<SDL.h>
+﻿#include<SDL.h>
 #include<SDL_image.h>
 #include<iostream>
 #include<string>
@@ -122,6 +122,206 @@ public:
 	}
 };
 
+class Entity2 {
+public:
+	float dx, dy, x, y, w, h;
+	AnimationManager anim;
+	std::vector<Object> obj;
+	bool life = true;
+	bool flip = false;
+	float timer, timer_end;
+	std::string Name;
+	int health;
+
+	Entity2(AnimationManager &A, int _x, int _y) {
+		anim = A;
+		x = _x;
+		y = _y;
+		flip = false;
+		life = true;
+		timer = 0;
+		timer_end = 0;
+		dx = dy = 0;
+	}
+
+	virtual void update(float num) = 0;
+
+	void draw(SDL_Renderer* &window) {
+		anim.draw(window, x, y);
+	}
+
+	SDL_FRect getRect() {
+		SDL_FRect f;
+		f = { x,y,w,h };
+		return f;
+	}
+
+	void option(std::string NAME, float SPEED = 0, int HEALTH = 10, std::string FIRST_ANIM = "") {
+		Name = NAME;
+		if (FIRST_ANIM != "") anim.set(FIRST_ANIM);
+		w = anim.getW();
+		h = anim.getH();
+		dx = SPEED;
+		health = HEALTH;
+	}
+};
+
+class Player2 : public Entity2 {
+public:
+	enum { stay, walk, duck, jump, climb, swim } STATE;
+	bool onLadder, shoot, hit;
+
+	Player2(AnimationManager &a, Level &lev, int x, int y) : Entity2(a, x, y) {
+		option("Player", 0, 100, "stay");
+		STATE = stay; hit = false;
+		obj = lev.GetAllObjects();
+	}
+
+	void keyboard() {
+		if (isKeyDown(SDL_SCANCODE_LEFT))
+		{
+			flip = true;
+			if (STATE != duck) dx = -0.1;
+			if (STATE == stay) STATE = walk;
+		}
+
+		if (isKeyDown(SDL_SCANCODE_RIGHT))
+		{
+			flip = false;
+			if (STATE != duck) dx = 0.1;
+			if (STATE == stay) STATE = walk;
+		}
+
+		if (isKeyDown(SDL_SCANCODE_UP))
+		{
+			if (onLadder) STATE = climb;
+			if (STATE == stay || STATE == walk) { dy = -0.27; STATE = jump; anim.play("jump"); }
+			if (STATE == climb) dy = -0.05;
+			if (STATE == climb) if (isKeyDown(SDL_SCANCODE_LEFT) || isKeyDown(SDL_SCANCODE_RIGHT)) STATE = stay;
+		}
+
+		if (isKeyDown(SDL_SCANCODE_DOWN))
+		{
+			if (STATE == stay || STATE == walk) { STATE = duck; dx = 0; }
+			if (STATE == climb) dy = 0.05;
+		}
+
+		if (isKeyDown(SDL_SCANCODE_SPACE))
+		{
+			shoot = true;
+		}
+
+		////////////////////////////////////////////////
+		if (!(isKeyDown(SDL_SCANCODE_LEFT) || isKeyDown(SDL_SCANCODE_RIGHT)))
+		{
+			dx = 0;
+			if (STATE == walk) STATE = stay;
+		}
+
+		if (!(isKeyDown(SDL_SCANCODE_UP) || isKeyDown(SDL_SCANCODE_DOWN)))
+		{
+			if (STATE == climb) dy = 0;
+		}
+
+		if (!isKeyDown(SDL_SCANCODE_DOWN))
+		{
+			if (STATE == duck) { STATE = stay; }
+		}
+
+		if (!isKeyDown(SDL_SCANCODE_SPACE))
+		{
+			shoot = false;
+		}
+	}
+
+	void Animation(float time) {
+		if (STATE == stay) anim.set("stay");
+		if (STATE == walk) anim.set("walk");
+		if (STATE == jump) anim.set("jump");
+		if (STATE == duck) anim.set("duck");
+		if (STATE == climb) { anim.set("climb"); anim.pause(); if (dy != 0) anim.play(); }
+
+		if (shoot) {
+			anim.set("shoot");
+			if (STATE == walk) anim.set("shootAndWalk");
+		}
+
+		if (hit) {
+			timer += time;
+			if (timer > 1000) { hit = false; timer = 0; }
+			anim.set("hit");
+		}
+
+		if (flip) anim.flip();
+
+		anim.tick(time);
+	}
+
+	void update(float time)
+	{
+		keyboard();
+
+		Animation(time);
+
+		if (STATE == climb) if (!onLadder) STATE = stay;
+		if (STATE != climb) dy += 0.0005*time;
+		onLadder = false;
+
+		x += dx * time;
+		Collision(0);
+
+		y += dy * time;
+		Collision(1);
+	}
+
+	void Collision(int num)
+	{
+		for (int i = 0; i < obj.size(); i++)
+			if (SDL_HasIntersection(&getRectFromFRect(getRect()), &getRectFromFRect(obj[i].rect)))
+			{
+				if (obj[i].name == "solid")
+				{
+					//std::cout << "choque con solid" << std::endl;
+					if (dy > 0 && num == 1) { y = obj[i].rect.y - h;  dy = 0; STATE = stay; }
+					if (dy < 0 && num == 1) { y = obj[i].rect.y + obj[i].rect.h;   dy = 0; }
+					if (dx > 0 && num == 0) { x = obj[i].rect.x - w; }
+					if (dx < 0 && num == 0) { x = obj[i].rect.x + obj[i].rect.w; }
+				}
+
+				if (obj[i].name == "ladder") { onLadder = true; if (STATE == climb) x = obj[i].rect.x - 10; }
+
+				if (obj[i].name == "SlopeLeft")
+				{
+					SDL_FRect r = obj[i].rect;
+					int y0 = (x + w / 2 - r.x) * r.h / r.w + r.y - h;
+					if (y > y0)
+					{
+						if (x + w / 2 > r.x)
+						{
+							y = y0; dy = 0; STATE = stay;
+						}
+					}
+				}
+
+				if (obj[i].name == "SlopeRight")
+				{
+					//std::cout << "collision with sloperight" << std::endl;
+					SDL_FRect r = obj[i].rect;
+					int y0 = -(x + w / 2 - r.x) * r.h / r.w + r.y + r.h - h;
+					if (y > y0)
+					{
+						if (x + w / 2 < r.x + r.w)
+						{
+							y = y0; dy = 0; STATE = stay;
+						}
+					}
+				}
+
+			}
+	}
+
+};
+
 class Player : public Entity {
 public:
 
@@ -189,10 +389,12 @@ public:
 					SDL_FRect r = obj[i].rect;
 					int y0 = (rect.x + rect.w / 2 - r.x) * r.h / r.w + r.y - rect.h;
 					if (rect.y > y0)
+					{
 						if (rect.x + rect.w / 2 > r.x)
 						{
 							rect.y = y0; dy = 0; onGround = true;
 						}
+					}
 				}
 
 				if (obj[i].name == "SlopeRight")
@@ -201,10 +403,12 @@ public:
 					SDL_FRect r = obj[i].rect;
 					int y0 = -(rect.x + rect.w / 2 - r.x) * r.h / r.w + r.y + r.h - rect.h;
 					if (rect.y > y0)
+					{
 						if (rect.x + rect.w / 2 < r.x + r.w)
 						{
 							rect.y = y0; dy = 0; onGround = true;
 						}
+					}
 				}
 
 			}
@@ -291,6 +495,10 @@ int main(int argc, char* args[])
 	AnimationManager anim;
 	anim.loadFromXML("files/anim_megaman.xml", megaman_t);
 	anim.animList["jump"].loop = 0;
+	//player
+	Object pl = lvl.GetObject("player");
+	//Player2 Mario2(anim, lvl, pl.rect.x, pl.rect.y);
+	Player2 Mario2(anim, lvl, 100, 50);
 
 	//player and enemy
 	Player Mario("PLAYER", "mario_tileset.png", lvl, 0, 0);
@@ -328,6 +536,7 @@ int main(int argc, char* args[])
 		}
 
 		//update
+		Mario2.update(25);
 		Mario.update(25);
 		enemy.update(25);
 
@@ -352,6 +561,7 @@ int main(int argc, char* args[])
 		lvl.draw();
 
 		//draw Mario and enemy
+		Mario2.draw(g_pRenderer);
 		Mario.draw();
 		enemy.draw();
 
