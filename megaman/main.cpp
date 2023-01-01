@@ -272,6 +272,9 @@ public:
 
 		y += dy * time;
 		Collision(1);
+
+		anim.animList[anim.currentAnim].sprite.pos.x = x - offsetX;
+		anim.animList[anim.currentAnim].sprite.pos.y = y - offsetY;
 	}
 
 	void Collision(int num)
