@@ -84,7 +84,7 @@ Level lvl;
 
 class Entity {
 public:
-	float dx, dy, x, y, w, h;
+	float dx, dy;
 	SDL_FRect rect; //real position
 	Tile sprite;
 	bool onGround;
@@ -118,6 +118,56 @@ public:
 		SDL_SetTextureAlphaMod(sprite.texture, 255);
 		SDL_RenderCopyEx(g_pRenderer, sprite.texture, &sprite.rect, &dest, 0.0, 0, flip == false ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL); //Load current frame on the buffer game.
 	}
+};
+
+class Entity2 {
+public:
+	std::string Name;
+	float dx, dy;
+	SDL_FRect rect; //real position
+	AnimationManager anim;
+	//Tile sprite;
+	bool onGround;
+	float currentFrame;
+	bool life = true;
+	bool flip = false;
+	float timer, timer_end;
+	int Health;
+	std::vector<Object> obj;
+
+	Entity2(AnimationManager &A, int X, int Y) {
+		anim = A;
+		rect.x = X;
+		rect.y = Y;
+		flip = false;
+
+		life = true;
+		timer = timer_end = 0;
+		dx = dy = 0;
+	}
+
+	virtual void update(float num) = 0;
+	virtual void Collision(int num) = 0;
+
+	void option(std::string NAME, float SPEED = 0, int HEALTH = 10, std::string FIRST_ANIM = "")
+	{
+		Name = NAME;
+		if (FIRST_ANIM != "") anim.set(FIRST_ANIM);
+		rect.w = anim.getW();
+		rect.h = anim.getH();
+		dx = SPEED;
+		Health = HEALTH;
+	}
+
+	void draw(SDL_Renderer* &window) {
+		anim.draw(window, rect.x - offsetX, rect.y - offsetY);
+	}
+
+	//void draw() {
+	//	SDL_Rect dest = { sprite.pos.x, sprite.pos.y, 16, 16 };
+	//	SDL_SetTextureAlphaMod(sprite.texture, 255);
+	//	SDL_RenderCopyEx(g_pRenderer, sprite.texture, &sprite.rect, &dest, 0.0, 0, flip == false ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL); //Load current frame on the buffer game.
+	//}
 };
 
 class Player : public Entity {
@@ -210,6 +260,163 @@ public:
 
 };
 
+class Player2 : public Entity2 {
+public:
+	enum { stay, walk, duck, jump, climb, swim } STATE;
+	bool onLadder, shoot, hit;
+
+	Player2(AnimationManager &a, Level &lev, int x, int y) : Entity2(a, x, y) {
+		option("Player", 0, 100, "stay");
+		STATE = stay; hit = false;
+		obj = lev.GetAllObjects();
+	};
+
+	void keyboard() {
+
+		if (isKeyDown(SDL_SCANCODE_LEFT))
+		{
+			flip = true;
+			if (STATE != duck) dx = -0.1;
+			if (STATE == stay) STATE = walk;
+		}
+
+		if (isKeyDown(SDL_SCANCODE_RIGHT))
+		{
+			flip = false;
+			if (STATE != duck) dx = 0.1;
+			if (STATE == stay) STATE = walk;
+		}
+
+		if (isKeyDown(SDL_SCANCODE_UP))
+		{
+			if (onLadder) STATE = climb;
+			if (STATE == stay || STATE == walk) { dy = -0.27; STATE = jump; anim.play("jump"); }
+			if (STATE == climb) dy = -0.05;
+			if (STATE == climb) if (isKeyDown(SDL_SCANCODE_LEFT) || isKeyDown(SDL_SCANCODE_RIGHT)) STATE = stay;
+		}
+
+		if (isKeyDown(SDL_SCANCODE_DOWN))
+		{
+			if (STATE == stay || STATE == walk) { STATE = duck; dx = 0; }
+			if (STATE == climb) dy = 0.05;
+		}
+
+		if (isKeyDown(SDL_SCANCODE_SPACE))
+		{
+			shoot = true;
+		}
+
+		//check if no key pressed
+		if (!(isKeyDown(SDL_SCANCODE_RIGHT) || isKeyDown(SDL_SCANCODE_LEFT)))
+		{
+			dx = 0;
+			if (STATE == walk) STATE = stay;
+		}
+
+		if (!(isKeyDown(SDL_SCANCODE_UP) || isKeyDown(SDL_SCANCODE_DOWN)))
+		{
+			if (STATE == climb) dy = 0;
+		}
+
+		if (!isKeyDown(SDL_SCANCODE_DOWN))
+		{
+			if (STATE == duck) { STATE = stay; }
+		}
+
+		if (!isKeyDown(SDL_SCANCODE_SPACE))
+		{
+			shoot = false;
+		}
+
+		//key["R"] = key["L"] = key["Up"] = key["Down"] = key["Space"] = false;
+	}
+
+	void Animation(float time)
+	{
+		if (STATE == stay) anim.set("stay");
+		if (STATE == walk) anim.set("walk");
+		if (STATE == jump) anim.set("jump");
+		if (STATE == duck) anim.set("duck");
+		if (STATE == climb) { anim.set("climb"); anim.pause(); if (dy != 0) anim.play(); }
+
+		if (shoot) {
+			anim.set("shoot");
+			if (STATE == walk) anim.set("shootAndWalk");
+		}
+
+		if (hit) {
+			timer += time;
+			if (timer > 1000) { hit = false; timer = 0; }
+			anim.set("hit");
+		}
+
+		//if (flip) anim.flip();
+
+		anim.tick(time);
+	}
+
+	void update(float time)
+	{
+		keyboard();
+
+		Animation(time);
+
+		if (STATE == climb) if (!onLadder) STATE = stay;
+		if (STATE != climb) dy += 0.0005*time;
+		onLadder = false;
+
+		rect.x += dx * time;
+		Collision(0);
+
+		rect.y += dy * time;
+		Collision(1);
+
+		/*sprite.pos.x = rect.x - offsetX;
+		sprite.pos.y = rect.y - offsetY;*/
+	}
+
+	void Collision(int num)
+	{
+		for (int i = 0; i < obj.size(); i++)
+			if (SDL_HasIntersection(&getRectFromFRect(rect), &getRectFromFRect(obj[i].rect)))
+			{
+				if (obj[i].name == "solid")
+				{
+					//std::cout << "choque con solid" << std::endl;
+					if (dy > 0 && num == 1) { rect.y = obj[i].rect.y - rect.h;  dy = 0; STATE = stay; }
+					if (dy < 0 && num == 1) { rect.y = obj[i].rect.y + obj[i].rect.h;   dy = 0; }
+					if (dx > 0 && num == 0) { rect.x = obj[i].rect.x - rect.w; }
+					if (dx < 0 && num == 0) { rect.x = obj[i].rect.x + obj[i].rect.w; }
+				}
+
+				if (obj[i].name == "SlopeLeft")
+				{
+					SDL_FRect r = obj[i].rect;
+					int y0 = (rect.x + rect.w / 2 - r.x) * r.h / r.w + r.y - rect.h;
+					if (rect.y > y0)
+						if (rect.x + rect.w / 2 > r.x)
+						{
+							rect.y = y0; dy = 0; STATE = stay;
+						}
+				}
+
+				if (obj[i].name == "SlopeRight")
+				{
+					//std::cout << "collision with sloperight" << std::endl;
+					SDL_FRect r = obj[i].rect;
+					int y0 = -(rect.x + rect.w / 2 - r.x) * r.h / r.w + r.y + r.h - rect.h;
+					if (rect.y > y0)
+						if (rect.x + rect.w / 2 < r.x + r.w)
+						{
+							rect.y = y0; dy = 0; STATE = stay;
+						}
+				}
+
+			}
+	}
+
+};
+
 class Enemy : public Entity {
 public:
 
@@ -294,6 +501,12 @@ int main(int argc, char* args[])
 	Player Mario("PLAYER", "mario_tileset.png", lvl, 0, 0);
 	Enemy enemy("ENEMY", "mario_tileset.png", 48 * 16, 13 * 16);
 
+	//player entity2
+	Object pl = lvl.GetObject("player");
+	pl.rect.x = 100;
+	pl.rect.y = 50;
+	Player2 Mario2(anim, lvl, pl.rect.x, pl.rect.y);
+
 	srand(time(NULL));
 
 	Uint32 frameStart, frameTime;
@@ -328,6 +541,7 @@ int main(int argc, char* args[])
 		//update
 		Mario.update(25);
 		enemy.update(25);
+		Mario2.update(25);
 
 		if(SDL_HasIntersection(&getRectFromFRect(Mario.rect), &getRectFromFRect(enemy.rect)))
 		{
@@ -352,6 +566,7 @@ int main(int argc, char* args[])
 		//draw Mario and enemy
 		Mario.draw();
 		enemy.draw();
+		Mario2.draw(g_pRenderer);
 
 		SDL_RenderPresent(g_pRenderer); // draw to the screen
 
