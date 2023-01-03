@@ -350,7 +350,7 @@ public:
 			anim.set("hit");
 		}
 
-		//if (flip) anim.flip();
+		if (flip) anim.flip();
 
 		anim.tick(time);
 	}
