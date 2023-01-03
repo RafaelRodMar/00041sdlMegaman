@@ -536,9 +536,9 @@ int main(int argc, char* args[])
 		}
 
 		//update
-		Mario.update(25);
-		enemy.update(25);
-		Mario2.update(25);
+		Mario.update(20);
+		enemy.update(20);
+		Mario2.update(20);
 
 		if(SDL_HasIntersection(&getRectFromFRect(Mario.rect), &getRectFromFRect(enemy.rect)))
 		{
