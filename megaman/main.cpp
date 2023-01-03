@@ -370,9 +370,6 @@ public:
 
 		rect.y += dy * time;
 		Collision(1);
-
-		/*sprite.pos.x = rect.x - offsetX;
-		sprite.pos.y = rect.y - offsetY;*/
 	}
 
 	void Collision(int num)
