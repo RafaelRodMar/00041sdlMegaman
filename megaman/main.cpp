@@ -2,6 +2,7 @@
 #include<SDL_image.h>
 #include<iostream>
 #include<string>
+#include<list>
 #include<time.h>
 
 SDL_Window* g_pWindow = 0;
@@ -260,6 +261,39 @@ public:
 
 };
 
+class Bullet :public Entity2{
+public:
+
+	Bullet(AnimationManager &a, Level &lev, int x, int y, bool dir) :Entity2(a, x, y)
+	{
+		option("Bullet", 0.3, 10, "move");
+
+		if (dir) dx = -0.3;
+		obj = lev.GetObjects("solid");
+	}
+
+	void update(float time)
+	{
+		rect.x += dx * time;
+
+		for (int i = 0; i < obj.size(); i++)
+			if (SDL_HasIntersection(&getRectFromFRect(rect), &getRectFromFRect(obj[i].rect)))
+			{
+				Health = 0;
+			}
+
+		if (Health <= 0) {
+			anim.set("explode"); dx = 0;
+			if (anim.isPlaying() == false) life = false;
+		}
+
+		anim.tick(time);
+	}
+
+	void Collision(int num){}
+
+};
+
 class Player2 : public Entity2 {
 public:
 	enum { stay, walk, duck, jump, climb, swim } STATE;
@@ -494,6 +528,11 @@ int main(int argc, char* args[])
 	anim.loadFromXML("files/anim_megaman.xml", megaman_t);
 	anim.animList["jump"].loop = 0;
 
+	AnimationManager anim2;
+	SDL_Texture* bullet_t = loadTexture("files/images/bullet.png", g_pRenderer);
+	anim2.create("move", bullet_t, 7, 10, 8, 8, 1, 0);
+	anim2.create("explode", bullet_t, 27, 7, 18, 18, 4, 0.01, 29, false);
+
 	//player and enemy
 	Player Mario("PLAYER", "mario_tileset.png", lvl, 0, 0);
 	Enemy enemy("ENEMY", "mario_tileset.png", 48 * 16, 13 * 16);
@@ -503,6 +542,10 @@ int main(int argc, char* args[])
 	pl.rect.x = 100;
 	pl.rect.y = 50;
 	Player2 Mario2(anim, lvl, pl.rect.x, pl.rect.y);
+
+	//
+	std::list<Entity2*> entities;
+	std::list<Entity2*>::iterator it;
 
 	srand(time(NULL));
 
@@ -524,6 +567,10 @@ int main(int argc, char* args[])
 
 			case SDL_KEYDOWN:
 				m_keystates = SDL_GetKeyboardState(0);
+				if (isKeyDown(SDL_SCANCODE_SPACE))
+				{
+					entities.push_back(new Bullet(anim2, lvl, Mario2.rect.x + 18, Mario2.rect.y + 18, Mario2.flip));
+				}
 				break;
 
 			case SDL_KEYUP:
@@ -533,6 +580,14 @@ int main(int argc, char* args[])
 			default:
 				break;
 			}
+		}
+
+		//update entities
+		for (it = entities.begin(); it != entities.end();) {
+			Entity2 *b = *it;
+			b->update(20);
+			if (b->life == false) { it = entities.erase(it); delete b; }
+			else it++;
 		}
 
 		//update
@@ -549,9 +604,14 @@ int main(int argc, char* args[])
 			}
 		}
 
-		if (Mario.rect.x > 200) offsetX = (int)(Mario.rect.x - 200);
-		if (Mario.rect.y > 200) offsetY = (int)(Mario.rect.y - 200);
+		//camera focus on Mario
+		//if (Mario.rect.x > 200) offsetX = (int)(Mario.rect.x - 200);
+		//if (Mario.rect.y > 200) offsetY = (int)(Mario.rect.y - 200);
 		//std::cout << Mario.rect.x << "," << Mario.rect.y << std::endl;
+
+		//camera focus on Megaman
+		if (Mario2.rect.x > 200) offsetX = (int)(Mario2.rect.x - 200);
+		if (Mario2.rect.y > 100) offsetY = (int)(Mario2.rect.y - 100);
 
 		//draw
 		SDL_SetRenderDrawColor(g_pRenderer, 107, 140, 255, 255);
@@ -559,6 +619,10 @@ int main(int argc, char* args[])
 
 		//draw background
 		lvl.draw();
+
+		//draw entities
+		for (it = entities.begin(); it != entities.end(); it++)
+			(*it)->draw(g_pRenderer);
 
 		//draw Mario and enemy
 		Mario.draw();
