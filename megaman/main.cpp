@@ -321,6 +321,25 @@ public:
 	void Collision(int num) {}
 };
 
+class MovingPlatform : public Entity2
+{
+public:
+	MovingPlatform(AnimationManager &a, Level &lev, int x, int y) :Entity2(a, x, y)
+	{
+		option("MovingPlatform", 0.05, 0, "move");
+	}
+
+	void update(float time)
+	{
+		rect.x += dx * time;
+		timer += time;
+		if (timer > 6000) { dx *= -1; timer = 0; }
+		anim.tick(time);
+	}
+	
+	void Collision(int num) {}
+};
+
 class Player2 : public Entity2 {
 public:
 	enum { stay, walk, duck, jump, climb, swim } STATE;
@@ -447,6 +466,8 @@ public:
 					if (dx < 0 && num == 0) { rect.x = obj[i].rect.x + obj[i].rect.w; }
 				}
 
+				if (obj[i].name == "ladder") { onLadder = true; if (STATE == climb) rect.x = obj[i].rect.x - 10; }
+
 				if (obj[i].name == "SlopeLeft")
 				{
 					SDL_FRect r = obj[i].rect;
@@ -568,9 +589,13 @@ int main(int argc, char* args[])
 	anim3.create("move", enemy_t, 0, 0, 16, 16, 2, 0.002, 18);
 	anim3.create("dead", enemy_t, 58, 0, 16, 16, 1, 0);
 
+	//moving platform
+	AnimationManager anim4;
+	SDL_Texture* moveplatform_t = loadTexture("files/images/movingPlatform.png", g_pRenderer);
+	anim4.create("move", moveplatform_t, 0, 0, 95, 22, 1, 0);
+
 	//player and enemy
 	Player Mario("PLAYER", "mario_tileset.png", lvl, 0, 0);
-	Enemy enemy("ENEMY", "mario_tileset.png", 48 * 16, 13 * 16);
 
 	//player entity2
 	Object pl = lvl.GetObject("player");
@@ -586,6 +611,11 @@ int main(int argc, char* args[])
 	std::vector<Object> e = lvl.GetObjects("enemy");
 	for (int i = 0; i < e.size(); i++)
 		entities.push_back(new ENEMY(anim3, lvl, e[i].rect.x, e[i].rect.y));
+
+	//add moving platforms
+	e = lvl.GetObjects("MovingPlatform");
+	for (int i = 0; i < e.size(); i++)
+		entities.push_back(new MovingPlatform(anim4, lvl, e[i].rect.x, e[i].rect.y));
 
 	srand(time(NULL));
 
@@ -632,15 +662,57 @@ int main(int argc, char* args[])
 
 		//update
 		Mario.update(20);
-		enemy.update(20);
 		Mario2.update(20);
 
-		if(SDL_HasIntersection(&getRectFromFRect(Mario.rect), &getRectFromFRect(enemy.rect)))
+		/*if(SDL_HasIntersection(&getRectFromFRect(Mario.rect), &getRectFromFRect(enemy.rect)))
 		{
 			if (enemy.life)
 			{
 				if (Mario.dy > 0) { enemy.dx = 0; Mario.dy = -0.2; enemy.life = false; }
 				else SDL_SetTextureColorMod(Mario.sprite.texture, 255, 0, 0);
+			}
+		}*/
+
+		//collisions
+		for (it = entities.begin(); it != entities.end(); it++)
+		{
+			if ((*it)->Name == "Enemy")
+			{
+				Entity2 *enemy = *it;
+
+				if (enemy->Health <= 0) continue;
+
+				if (SDL_HasIntersection(&getRectFromFRect(Mario2.rect), &getRectFromFRect(enemy->rect)))
+					if (Mario2.dy > 0) { enemy->dx = 0; Mario2.dy = -0.2; enemy->Health = 0; }
+					else if (!Mario2.hit) {
+						Mario2.Health -= 5; Mario2.hit = true;
+						if (Mario2.flip) Mario2.rect.x += 10; else Mario2.rect.x -= 10;
+					}
+
+
+				for (std::list<Entity2*>::iterator it2 = entities.begin(); it2 != entities.end(); it2++)
+				{
+					Entity2 *bullet = *it2;
+					if (bullet->Name == "Bullet")
+						if (bullet->Health > 0)
+							if (SDL_HasIntersection(&getRectFromFRect(bullet->rect), &getRectFromFRect(enemy->rect)))
+							{
+								bullet->Health = 0; enemy->Health -= 5;
+							}
+				}
+			}
+
+			//moving platforms
+			int time = 20;
+			if ((*it)->Name == "MovingPlatform")
+			{
+				Entity2 *movPlat = *it;
+				if (SDL_HasIntersection(&getRectFromFRect(Mario2.rect), &getRectFromFRect(movPlat->rect)))
+					if (Mario2.dy > 0)
+						if (Mario2.rect.y + Mario2.rect.h < movPlat->rect.y + movPlat->rect.h)
+						{
+							Mario2.rect.y = movPlat->rect.y - Mario2.rect.h + 3; Mario2.rect.x += movPlat->dx*time; Mario2.dy = 0; Mario2.STATE = Player2::stay;
+						}
 			}
 		}
 
@@ -666,7 +738,6 @@ int main(int argc, char* args[])
 
 		//draw Mario and enemy
 		Mario.draw();
-		enemy.draw();
 		Mario2.draw(g_pRenderer);
 
 		SDL_RenderPresent(g_pRenderer); // draw to the screen
@@ -684,7 +755,6 @@ int main(int argc, char* args[])
 	
 	std::cout << "game closing...\n";
 	SDL_DestroyTexture(Mario.sprite.texture);
-	SDL_DestroyTexture(enemy.sprite.texture);
 	SDL_DestroyTexture(megaman_t);
 	SDL_DestroyTexture(lvl.tilesetImage);
 
