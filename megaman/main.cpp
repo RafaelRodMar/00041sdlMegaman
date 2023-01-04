@@ -294,6 +294,33 @@ public:
 
 };
 
+class ENEMY : public Entity2
+{
+public:
+
+	ENEMY(AnimationManager &a, Level &lev, int x, int y) :Entity2(a, x, y)
+	{
+		option("Enemy", 0.01, 15, "move");
+	}
+
+	void update(float time)
+	{
+		rect.x += dx * time;
+		timer += time;
+		if (timer > 3200) { dx *= -1; timer = 0; }
+
+		if (Health <= 0) {
+			anim.set("dead"); dx = 0;
+			timer_end += time;
+			if (timer_end > 4000) life = false;
+		}
+
+		anim.tick(time);
+	}
+
+	void Collision(int num) {}
+};
+
 class Player2 : public Entity2 {
 public:
 	enum { stay, walk, duck, jump, climb, swim } STATE;
@@ -523,15 +550,23 @@ int main(int argc, char* args[])
 	lvl.loadFromFile("files/Level1.tmx");
 
 	//load animations
+	//Megaman
 	SDL_Texture* megaman_t = loadTexture("files/images/megaman.png", g_pRenderer);
 	AnimationManager anim;
 	anim.loadFromXML("files/anim_megaman.xml", megaman_t);
 	anim.animList["jump"].loop = 0;
 
+	//Bullets
 	AnimationManager anim2;
 	SDL_Texture* bullet_t = loadTexture("files/images/bullet.png", g_pRenderer);
 	anim2.create("move", bullet_t, 7, 10, 8, 8, 1, 0);
 	anim2.create("explode", bullet_t, 27, 7, 18, 18, 4, 0.01, 29, false);
+
+	//enemy
+	AnimationManager anim3;
+	SDL_Texture* enemy_t = loadTexture("files/images/enemy.png", g_pRenderer);
+	anim3.create("move", enemy_t, 0, 0, 16, 16, 2, 0.002, 18);
+	anim3.create("dead", enemy_t, 58, 0, 16, 16, 1, 0);
 
 	//player and enemy
 	Player Mario("PLAYER", "mario_tileset.png", lvl, 0, 0);
@@ -546,6 +581,11 @@ int main(int argc, char* args[])
 	//
 	std::list<Entity2*> entities;
 	std::list<Entity2*>::iterator it;
+
+	//add enemies to entities
+	std::vector<Object> e = lvl.GetObjects("enemy");
+	for (int i = 0; i < e.size(); i++)
+		entities.push_back(new ENEMY(anim3, lvl, e[i].rect.x, e[i].rect.y));
 
 	srand(time(NULL));
 
