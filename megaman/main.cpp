@@ -575,7 +575,7 @@ int main(int argc, char* args[])
 	SDL_Texture* megaman_t = loadTexture("files/images/megaman.png", g_pRenderer);
 	AnimationManager anim;
 	anim.loadFromXML("files/anim_megaman.xml", megaman_t);
-	anim.animList["jump"].loop = 0;
+	anim.animList["jump"].loop = false;
 
 	//Bullets
 	AnimationManager anim2;

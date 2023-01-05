@@ -53,13 +53,8 @@
  <animation title="climb" delay="150">
   <cut w="21" x="122" y="387" h="58" row="1" col="1"/>
   <cut w="25" x="146" y="389" h="51" row="1" col="1"/>
-
   <cut w="30" x="211" y="388" h="53" row="1" col="1"/>
-  
-    <cut w="-21" x="143" y="387" h="58" row="1" col="1"/>
-  <cut w="-25" x="171" y="389" h="51" row="1" col="1"/>
 
-  <cut w="-30" x="241" y="388" h="53" row="1" col="1"/>
  </animation>
  <animation title="stay" delay="150">
   <cut w="32" x="233" y="93" h="41" row="1" col="1"/>
