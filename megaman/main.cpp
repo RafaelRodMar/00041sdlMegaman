@@ -525,6 +525,55 @@ public:
 	}
 };
 
+class HealthBar
+{
+public:
+	Tile s;
+	int max;
+	SDL_Rect bar;
+	SDL_Color c = { 0,0,0,255 };
+
+	HealthBar()
+	{
+		s.texture = loadTexture("files/images/HealthBar.png", g_pRenderer);
+		s.rect.w = 13;
+		s.rect.h = 82;
+		max = 100;
+	}
+
+	void update(int k)
+	{
+		if (k > 0) if (k < max)
+		{
+			bar.w = 10;
+			bar.h = (max - k) * 70 / max;
+		}
+	}
+
+	void draw(SDL_Renderer* &window)
+	{
+		SDL_Point size;
+		SDL_Point center;
+		SDL_GetWindowSize(g_pWindow, &size.x, &size.y);
+		center.x = size.x / 2;
+		center.y = size.y / 2;
+
+		s.pos.x = center.x - size.x / 2 + 10;
+		s.pos.y = center.y - size.y / 2 + 10;
+
+		bar.x = center.x - size.x / 2 + 11;
+		bar.y = center.y - size.y / 2 + 13;
+
+		SDL_Rect src = { 0,0,13,82 };
+		SDL_Rect dest = { s.pos.x, s.pos.y, s.rect.w, s.rect.h};
+		SDL_SetTextureAlphaMod(s.texture, 255);
+		SDL_RenderCopyEx(g_pRenderer, s.texture, &src, &dest, 0.0, 0, SDL_FLIP_NONE);
+
+		SDL_RenderDrawRect(g_pRenderer, &bar);
+	}
+
+};
+
 const int FPS = 60;
 const int DELAY_TIME = 1000.0f / FPS;
 
@@ -617,6 +666,9 @@ int main(int argc, char* args[])
 	for (int i = 0; i < e.size(); i++)
 		entities.push_back(new MovingPlatform(anim4, lvl, e[i].rect.x, e[i].rect.y));
 
+	//
+	HealthBar healthBar;
+
 	srand(time(NULL));
 
 	Uint32 frameStart, frameTime;
@@ -663,6 +715,7 @@ int main(int argc, char* args[])
 		//update
 		Mario.update(20);
 		Mario2.update(20);
+		healthBar.update(Mario2.Health);
 
 		/*if(SDL_HasIntersection(&getRectFromFRect(Mario.rect), &getRectFromFRect(enemy.rect)))
 		{
@@ -739,6 +792,7 @@ int main(int argc, char* args[])
 		//draw Mario and enemy
 		Mario.draw();
 		Mario2.draw(g_pRenderer);
+		healthBar.draw(g_pRenderer);
 
 		SDL_RenderPresent(g_pRenderer); // draw to the screen
 
